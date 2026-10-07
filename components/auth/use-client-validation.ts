@@ -9,8 +9,15 @@ export function useClientValidation(schema: z.ZodType) {
   const [clientErrors, setClientErrors] = useState<FieldErrors | null>(null);
 
   // Next keeps a route mounted but hidden after the user leaves it, and React
-  // runs layout-effect cleanups at that moment. Typed credentials and their
-  // errors must not wait there for whoever uses the browser next.
+  // runs layout-effect cleanups at that moment. Nothing typed or returned by
+  // the server may wait in that hidden screen for whoever uses the browser
+  // next, so the fields are emptied right away. form.reset() would not do: it
+  // restores the e-mail the server sent back after a failed attempt. The form
+  // itself is rebuilt on return (see useResetKeyOnHide).
+  //
+  // In development, StrictMode runs this cleanup once right after mount, so
+  // anything typed before the page finishes loading is cleared. Production
+  // does not do that.
   //
   // This has to be an effect with no dependencies, not a callback ref: a ref
   // callback that changes between renders is cleaned up on every re-render,
@@ -18,7 +25,11 @@ export function useClientValidation(schema: z.ZodType) {
   useLayoutEffect(() => {
     const form = formRef.current;
     return () => {
-      form?.reset();
+      form
+        ?.querySelectorAll<HTMLInputElement>('input:not([type="hidden"])')
+        .forEach((input) => {
+          input.value = "";
+        });
       setClientErrors(null);
     };
   }, []);

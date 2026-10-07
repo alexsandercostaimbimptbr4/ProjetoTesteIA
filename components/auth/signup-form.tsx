@@ -8,8 +8,14 @@ import { signupSchema } from "@/lib/auth/schemas";
 import { FormField } from "./form-field";
 import { SubmitButton } from "./submit-button";
 import { useClientValidation } from "./use-client-validation";
+import { useResetKeyOnHide } from "./use-reset-key-on-hide";
 
 export function SignupForm() {
+  const resetKey = useResetKeyOnHide();
+  return <SignupFields key={resetKey} />;
+}
+
+function SignupFields() {
   const [state, formAction, pending] = useActionState(signup, {});
   const { clientErrors, formRef, handleSubmit } =
     useClientValidation(signupSchema);

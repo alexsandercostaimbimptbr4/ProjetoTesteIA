@@ -100,8 +100,9 @@ tradicional:
   sessão. O proxy já trata `/` antes disso.
 - O Next.js mantém a tela anterior montada e oculta depois de uma navegação.
   Por isso os campos dos formulários usam identificadores únicos (`useId`) e
-  os formulários são limpos quando a tela é ocultada, para que uma senha
-  digitada não fique guardada. Enquanto a tela está visível nada é apagado:
+  os formulários são esvaziados e reconstruídos quando a tela é ocultada, para
+  que nem uma senha digitada nem o resultado de uma tentativa anterior (erro
+  e e-mail) fiquem guardados. Enquanto a tela está visível nada é apagado:
   depois de um erro de validação no navegador, tudo o que foi digitado
   continua nos campos.
 
@@ -199,7 +200,8 @@ inválido, e cada mensagem fica associada ao seu campo para leitores de tela.
 Toda tradução de erro do Supabase passa por `lib/auth/errors.ts`. Um erro não
 mapeado vira a mensagem genérica de conexão; texto técnico em inglês nunca
 chega à tela. Sempre que o usuário recebe essa mensagem genérica, a causa é
-registrada no console do servidor, sem dados do formulário.
+registrada no console do servidor. Só o objeto de erro é registrado; os dados
+do formulário não são passados ao log.
 
 Se a confirmação de e-mail for religada no Supabase, o cadastro mostra o aviso
 "Conta criada. Confirme seu e-mail para entrar.".

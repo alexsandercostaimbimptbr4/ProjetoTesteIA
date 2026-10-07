@@ -35,8 +35,8 @@ export async function signOut(page: Page) {
 }
 
 // Records whether the dashboard greeting is ever on screen from now on, even
-// briefly. Survives client-side navigations; a full reload clears it, and then
-// the proxy has already redirected before anything rendered.
+// briefly. Survives client-side navigations. A full reload would lose the
+// observer; sawDashboard() then returns undefined and the test fails.
 export async function watchForDashboard(page: Page) {
   await page.evaluate(() => {
     const state = window as unknown as { sawDashboard?: boolean };

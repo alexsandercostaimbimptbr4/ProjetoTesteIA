@@ -184,3 +184,29 @@ test("senha digitada e não enviada não fica guardada ao trocar de tela", async
   await expect(field(page, "Senha")).toHaveValue("");
   await expect(field(page, "E-mail")).toHaveValue("");
 });
+
+test("erro de login não reaparece ao ir para o cadastro e voltar", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await field(page, "E-mail").fill("ninguem-cadastrado@example.com");
+  await field(page, "Senha").fill("senha-qualquer-123");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByText("E-mail ou senha incorretos")).toBeVisible();
+
+  await page.getByRole("link", { name: "Cadastre-se" }).click();
+  await expect(page).toHaveURL(/\/cadastro$/);
+  // Nothing of the failed attempt may wait in the hidden login screen.
+  expect(
+    await page
+      .locator("input")
+      .evaluateAll((inputs) =>
+        inputs.map((input) => (input as HTMLInputElement).value),
+      ),
+  ).not.toContain("ninguem-cadastrado@example.com");
+
+  await page.getByRole("link", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByText("E-mail ou senha incorretos")).toBeHidden();
+  await expect(field(page, "E-mail")).toHaveValue("");
+});

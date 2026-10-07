@@ -7,8 +7,14 @@ import { loginSchema } from "@/lib/auth/schemas";
 import { FormField } from "./form-field";
 import { SubmitButton } from "./submit-button";
 import { useClientValidation } from "./use-client-validation";
+import { useResetKeyOnHide } from "./use-reset-key-on-hide";
 
 export function LoginForm() {
+  const resetKey = useResetKeyOnHide();
+  return <LoginFields key={resetKey} />;
+}
+
+function LoginFields() {
   const [state, formAction, pending] = useActionState(login, {});
   const { clientErrors, formRef, handleSubmit } =
     useClientValidation(loginSchema);

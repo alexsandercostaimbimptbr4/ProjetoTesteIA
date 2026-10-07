@@ -11,8 +11,8 @@ const text = (formData: FormData, key: string) =>
   String(formData.get(key) ?? "");
 
 // Translates a Supabase failure for the screen. When all the user gets is the
-// generic message, the cause goes to the server log; it never includes form
-// data.
+// generic message, the cause goes to the server log. Only the error object
+// is logged; the form data is never passed to the log.
 function failureMessage(error: unknown, context: "login" | "signup") {
   const message = translateAuthError(error, context);
   if (message === AUTH_MESSAGES.generic) {
