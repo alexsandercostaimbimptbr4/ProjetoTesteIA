@@ -6,7 +6,7 @@ export function newUser(): TestUser {
   const domain = process.env.E2E_EMAIL_DOMAIN ?? "example.com";
   const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   return {
-    name: "Teste E2E",
+    name: `Teste ${unique.slice(-6)}`,
     email: `e2e-${unique}@${domain}`,
     password: "senha-e2e-1234",
   };

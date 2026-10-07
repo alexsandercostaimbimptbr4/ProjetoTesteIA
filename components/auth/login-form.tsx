@@ -1,28 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, type FormEvent } from "react";
+import { useActionState } from "react";
 import { login } from "@/app/(auth)/actions";
-import { fieldErrorsFrom, type FieldErrors } from "@/lib/auth/form-state";
 import { loginSchema } from "@/lib/auth/schemas";
 import { FormField } from "./form-field";
 import { SubmitButton } from "./submit-button";
+import { useClientValidation } from "./use-client-validation";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(login, {});
-  const [clientErrors, setClientErrors] = useState<FieldErrors | null>(null);
+  const { clientErrors, handleSubmit } = useClientValidation(loginSchema);
   const errors = clientErrors ?? state.fieldErrors ?? {};
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    const data = Object.fromEntries(new FormData(event.currentTarget));
-    const parsed = loginSchema.safeParse(data);
-    if (parsed.success) {
-      setClientErrors(null);
-      return;
-    }
-    event.preventDefault();
-    setClientErrors(fieldErrorsFrom(parsed.error));
-  }
+  // The last server answer is stale once a new attempt starts.
+  const showServerState = !clientErrors && !pending;
 
   return (
     <form
@@ -31,7 +22,7 @@ export function LoginForm() {
       noValidate
       className="grid gap-4"
     >
-      {state.message && !clientErrors ? (
+      {showServerState && state.message ? (
         <p role="alert" className="text-sm text-destructive">
           {state.message}
         </p>

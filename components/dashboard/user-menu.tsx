@@ -40,9 +40,13 @@ export function UserMenu({ user }: { user: DisplayUser }) {
         <Avatar size="sm">
           <AvatarFallback>{initials(user.name)}</AvatarFallback>
         </Avatar>
-        <span className="hidden text-left leading-tight sm:grid">
-          <span className="text-sm font-medium">{user.name}</span>
-          <span className="text-xs text-muted-foreground">{user.email}</span>
+        <span className="grid text-left leading-tight">
+          <span className="max-w-32 truncate text-sm font-medium sm:max-w-none">
+            {user.name}
+          </span>
+          <span className="hidden text-xs text-muted-foreground sm:block">
+            {user.email}
+          </span>
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

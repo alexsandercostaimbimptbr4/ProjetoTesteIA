@@ -66,7 +66,7 @@ export async function signup(
     if (!data.session) {
       // Only happens if "Confirm email" is enabled in the Supabase project.
       return {
-        message: "Conta criada. Confirme seu e-mail para entrar.",
+        info: "Conta criada. Confirme seu e-mail para entrar.",
         values,
       };
     }

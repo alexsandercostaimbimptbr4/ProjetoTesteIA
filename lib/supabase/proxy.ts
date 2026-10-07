@@ -13,13 +13,18 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
+          );
+          // Cache headers sent with auth cookies: a response that sets a
+          // session must never be stored by a CDN or shared proxy.
+          Object.entries(headers).forEach(([key, value]) =>
+            supabaseResponse.headers.set(key, value),
           );
         },
       },
@@ -41,9 +46,14 @@ export async function updateSession(request: NextRequest) {
   url.pathname = destination;
   url.search = "";
   const redirectResponse = NextResponse.redirect(url);
-  // Carry over refreshed session cookies, or the renewed session is lost.
+  // Carry over refreshed session cookies, or the renewed session is lost,
+  // along with the cache headers that came with them.
   supabaseResponse.cookies
     .getAll()
     .forEach((cookie) => redirectResponse.cookies.set(cookie));
+  for (const key of ["cache-control", "expires", "pragma"]) {
+    const value = supabaseResponse.headers.get(key);
+    if (value) redirectResponse.headers.set(key, value);
+  }
   return redirectResponse;
 }

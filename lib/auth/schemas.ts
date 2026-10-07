@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Supabase hashes passwords with bcrypt, which reads at most 72 bytes.
+const MAX_PASSWORD_BYTES = 72;
+
 const email = z
   .string()
   .trim()
@@ -18,7 +21,12 @@ export const signupSchema = z
     password: z
       .string()
       .min(8, "A senha deve ter no mínimo 8 caracteres")
-      .max(72, "A senha deve ter no máximo 72 caracteres"),
+      .max(72, "A senha deve ter no máximo 72 caracteres")
+      .refine(
+        (value) =>
+          new TextEncoder().encode(value).length <= MAX_PASSWORD_BYTES,
+        "A senha é longa demais: letras acentuadas contam em dobro",
+      ),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {

@@ -6,6 +6,8 @@ export type FieldErrors = Partial<Record<AuthField, string>>;
 
 export type AuthFormState = {
   message?: string;
+  // Neutral notice, shown without error styling.
+  info?: string;
   fieldErrors?: FieldErrors;
   values?: { name?: string; email?: string };
 };

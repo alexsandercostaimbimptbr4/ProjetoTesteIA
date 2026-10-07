@@ -39,7 +39,7 @@ export function Sidebar() {
             className="flex items-center gap-2 rounded-lg px-2 py-2 text-muted-foreground"
           >
             <Icon className="size-4" aria-hidden />
-            <span aria-disabled="true">{label}</span>
+            <span>{label}</span>
             <Badge variant="outline" className="ml-auto">
               em breve
             </Badge>

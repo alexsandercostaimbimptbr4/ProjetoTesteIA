@@ -67,6 +67,31 @@ describe("signupSchema", () => {
     ).toBe("A senha deve ter no máximo 72 caracteres");
   });
 
+  it("limita a senha a 72 bytes, contando acentos", () => {
+    const accented = "ã".repeat(40); // 40 characters, 80 bytes
+    expect(
+      firstError(
+        signupSchema.safeParse({
+          ...valid,
+          password: accented,
+          confirmPassword: accented,
+        }),
+        "password",
+      ),
+    ).toBe("A senha é longa demais: letras acentuadas contam em dobro");
+  });
+
+  it("aceita senha acentuada dentro do limite de bytes", () => {
+    const accented = "ã".repeat(36); // 72 bytes
+    expect(
+      signupSchema.safeParse({
+        ...valid,
+        password: accented,
+        confirmPassword: accented,
+      }).success,
+    ).toBe(true);
+  });
+
   it("não altera espaços da senha", () =>
     expect(
       signupSchema.parse({

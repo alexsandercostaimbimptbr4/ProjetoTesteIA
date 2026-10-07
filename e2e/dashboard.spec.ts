@@ -34,7 +34,11 @@ test("mostra a casca do CRM", async ({ page }) => {
 
 test("em tela pequena o menu abre por um botão", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
-  await signUp(page, newUser());
+  const user = newUser();
+  await signUp(page, user);
+  await expect(
+    page.getByRole("button", { name: "Menu do usuário" }).getByText(user.name),
+  ).toBeVisible();
   await expect(page.getByRole("navigation")).toBeHidden();
   await page.getByRole("button", { name: "Abrir menu" }).click();
   await expect(
