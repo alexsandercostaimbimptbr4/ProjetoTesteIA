@@ -15,6 +15,32 @@ test("sair bloqueia o dashboard", async ({ page }) => {
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test("voltar depois de sair não mostra o dashboard", async ({ page }) => {
+  await signUp(page, newUser());
+  await signOut(page);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("heading", { name: /Olá,/ })).toBeHidden();
+});
+
+test("erro de login não reaparece depois de entrar e sair", async ({
+  page,
+}) => {
+  const user = newUser();
+  await signUp(page, user);
+  await signOut(page);
+  await field(page, "E-mail").fill(user.email);
+  await field(page, "Senha").fill("senha-errada-999");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByText("E-mail ou senha incorretos")).toBeVisible();
+  await field(page, "Senha").fill(user.password);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await signOut(page);
+  await expect(page.getByText("E-mail ou senha incorretos")).toBeHidden();
+  await expect(field(page, "E-mail")).toHaveValue("");
+});
+
 test("senha errada mostra erro e mantém o e-mail", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
@@ -31,12 +57,15 @@ test("login correto entra e bloqueia /login", async ({ page }) => {
   const user = newUser();
   await signUp(page, user);
   await signOut(page);
-  await field(page, "E-mail").fill(user.email);
+  // Typed with spaces and capitals: must be normalised before sign-in.
+  await field(page, "E-mail").fill(`  ${user.email.toUpperCase()} `);
   await field(page, "Senha").fill(user.password);
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await page.goto("/login");
-  await expect(page).toHaveURL(/\/dashboard$/);
+  for (const path of ["/login", "/cadastro"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/dashboard$/);
+  }
 });
 
 test("e-mail já cadastrado mostra erro com link para entrar", async ({
