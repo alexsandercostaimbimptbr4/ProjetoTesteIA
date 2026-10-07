@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 
-export default async function Home() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  redirect(data?.claims ? "/dashboard" : "/login");
+// The proxy already redirects "/" by session. This is the fallback if it did
+// not run: /dashboard checks the session itself.
+export default function Home() {
+  redirect("/dashboard");
 }
