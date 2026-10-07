@@ -1,10 +1,18 @@
+import { getCurrentUser } from "@/lib/auth/current-user";
+
 export type Stat = { id: string; label: string; value: string; change: string };
 
 export type Activity = { id: string; description: string; when: string };
 
 // Demo data only. When the real CRM modules exist, this function is the one
-// place to replace with database queries.
-export function getDashboardData(): { stats: Stat[]; activities: Activity[] } {
+// place to replace with database queries. It checks the session itself: a
+// layout does not stop a page from rendering, so data access is the gate.
+export async function getDashboardData(): Promise<{
+  stats: Stat[];
+  activities: Activity[];
+}> {
+  await getCurrentUser();
+
   return {
     stats: [
       {
