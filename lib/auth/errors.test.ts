@@ -25,6 +25,7 @@ it.each([
   [{ code: "validation_failed" }, "login", "Verifique os dados informados"],
   [{ status: 429 }, "signup", "Muitas tentativas. Aguarde alguns minutos."],
   [{ code: "unexpected_failure", message: "Database error" }, "login", GENERIC],
+  [{ code: "constructor" }, "login", GENERIC],
   [new TypeError("fetch failed"), "login", GENERIC],
   [null, "signup", GENERIC],
 ])("traduz %o em %s", (error, context, expected) =>

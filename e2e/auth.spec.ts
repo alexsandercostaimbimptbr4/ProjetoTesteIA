@@ -99,9 +99,14 @@ test("validação no navegador mostra erro abaixo do campo", async ({ page }) =>
     page.getByText("A senha deve ter no mínimo 8 caracteres"),
   ).toBeVisible();
   await expect(page.getByText("As senhas não coincidem")).toBeVisible();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "As senhas não coincidem" }),
-  ).toBeVisible();
+  // Each error is tied to its field, and focus lands on the first invalid one.
+  await expect(field(page, "Senha")).toHaveAccessibleDescription(
+    "A senha deve ter no mínimo 8 caracteres",
+  );
+  await expect(field(page, "Confirmar senha")).toHaveAccessibleDescription(
+    "As senhas não coincidem",
+  );
   await expect(field(page, "Senha")).toBeFocused();
+  await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page).toHaveURL(/\/cadastro$/);
 });

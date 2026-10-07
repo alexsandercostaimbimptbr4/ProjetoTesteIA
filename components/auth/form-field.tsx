@@ -36,8 +36,11 @@ export function FormField({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
       />
+      {/* Announced through aria-describedby when the field gets focus, which
+          the form moves to the first invalid field. A live region here would
+          read every error twice. */}
       {error ? (
-        <p id={errorId} role="alert" className="text-sm text-destructive">
+        <p id={errorId} className="text-sm text-destructive">
           {error}
         </p>
       ) : null}

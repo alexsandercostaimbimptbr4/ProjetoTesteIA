@@ -29,7 +29,9 @@ export function translateAuthError(
   if (typeof error !== "object" || error === null) return AUTH_MESSAGES.generic;
 
   const { code, status } = error as { code?: unknown; status?: unknown };
-  if (typeof code === "string" && code in BY_CODE) return BY_CODE[code];
+  if (typeof code === "string" && Object.hasOwn(BY_CODE, code)) {
+    return BY_CODE[code];
+  }
   if (status === 429) return AUTH_MESSAGES.rateLimited;
   return AUTH_MESSAGES.generic;
 }

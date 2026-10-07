@@ -46,3 +46,7 @@ next-env.d.ts
 test-results/
 playwright-report/
 .superpowers/
+
+# local tool configuration
+.claude/
+.serena/

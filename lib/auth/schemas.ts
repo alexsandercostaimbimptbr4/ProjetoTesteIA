@@ -16,7 +16,13 @@ export const loginSchema = z.object({
 
 export const signupSchema = z
   .object({
-    name: z.string().trim().min(1, "Informe seu nome"),
+    // The name travels inside the session token and its cookies on every
+    // request, so it needs a ceiling.
+    name: z
+      .string()
+      .trim()
+      .min(1, "Informe seu nome")
+      .max(100, "O nome deve ter no máximo 100 caracteres"),
     email,
     password: z
       .string()

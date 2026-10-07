@@ -36,6 +36,18 @@ describe("signupSchema", () => {
       firstError(signupSchema.safeParse({ ...valid, name: "   " }), "name"),
     ).toBe("Informe seu nome"));
 
+  it("limita o nome a 100 caracteres", () => {
+    expect(
+      firstError(
+        signupSchema.safeParse({ ...valid, name: "a".repeat(101) }),
+        "name",
+      ),
+    ).toBe("O nome deve ter no máximo 100 caracteres");
+    expect(
+      signupSchema.safeParse({ ...valid, name: "a".repeat(100) }).success,
+    ).toBe(true);
+  });
+
   it("rejeita e-mail inválido", () =>
     expect(
       firstError(signupSchema.safeParse({ ...valid, email: "ana@" }), "email"),

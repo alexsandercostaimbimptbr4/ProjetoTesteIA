@@ -1,9 +1,29 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveRedirect } from "@/lib/auth/routes";
 
+type SessionCookie = { name: string; value: string; options: CookieOptions };
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+
+  // Everything Supabase asked to write during this request. setAll can run
+  // more than once and only its first call carries the cache headers, so they
+  // are kept here and reapplied to whichever response is finally returned.
+  const sessionCookies = new Map<string, SessionCookie>();
+  const cacheHeaders: Record<string, string> = {};
+
+  function applySession(response: NextResponse) {
+    sessionCookies.forEach(({ name, value, options }) =>
+      response.cookies.set(name, value, options),
+    );
+    // A response that sets a session must never be stored by a CDN or shared
+    // proxy, or one user's token could be served to another.
+    Object.entries(cacheHeaders).forEach(([key, value]) =>
+      response.headers.set(key, value),
+    );
+    return response;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,18 +34,13 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet, headers) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
-          // Cache headers sent with auth cookies: a response that sets a
-          // session must never be stored by a CDN or shared proxy.
-          Object.entries(headers).forEach(([key, value]) =>
-            supabaseResponse.headers.set(key, value),
-          );
+          cookiesToSet.forEach((cookie) => {
+            request.cookies.set(cookie.name, cookie.value);
+            sessionCookies.set(cookie.name, cookie);
+          });
+          Object.assign(cacheHeaders, headers);
+          // Rebuilt so Server Components see the refreshed request cookies.
+          supabaseResponse = applySession(NextResponse.next({ request }));
         },
       },
     },
@@ -45,15 +60,6 @@ export async function updateSession(request: NextRequest) {
   const url = request.nextUrl.clone();
   url.pathname = destination;
   url.search = "";
-  const redirectResponse = NextResponse.redirect(url);
-  // Carry over refreshed session cookies, or the renewed session is lost,
-  // along with the cache headers that came with them.
-  supabaseResponse.cookies
-    .getAll()
-    .forEach((cookie) => redirectResponse.cookies.set(cookie));
-  for (const key of ["cache-control", "expires", "pragma"]) {
-    const value = supabaseResponse.headers.get(key);
-    if (value) redirectResponse.headers.set(key, value);
-  }
-  return redirectResponse;
+  // The redirect carries the refreshed session too, or it would be lost.
+  return applySession(NextResponse.redirect(url));
 }
