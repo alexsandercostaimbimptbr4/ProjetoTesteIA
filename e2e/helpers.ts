@@ -29,6 +29,7 @@ export async function signUp(page: Page, user: TestUser) {
 }
 
 export async function signOut(page: Page) {
-  await page.getByRole("button", { name: "Sair" }).click();
+  await page.getByRole("button", { name: "Menu do usuário" }).click();
+  await page.getByRole("menuitem", { name: "Sair" }).click();
   await expect(page).toHaveURL(/\/login$/);
 }
