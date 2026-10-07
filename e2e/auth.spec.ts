@@ -111,3 +111,18 @@ test("validação no navegador mostra erro abaixo do campo", async ({ page }) =>
   await expect(page.locator("form").getByRole("alert")).toHaveCount(0);
   await expect(page).toHaveURL(/\/cadastro$/);
 });
+
+test("a sessão fica em cookies que o JavaScript não lê", async ({
+  page,
+  context,
+}) => {
+  await signUp(page, newUser());
+  const session = (await context.cookies()).filter((cookie) =>
+    cookie.name.includes("auth-token"),
+  );
+  expect(session.length).toBeGreaterThan(0);
+  for (const cookie of session) expect(cookie.httpOnly).toBe(true);
+  expect(await page.evaluate(() => document.cookie)).not.toContain(
+    "auth-token",
+  );
+});
