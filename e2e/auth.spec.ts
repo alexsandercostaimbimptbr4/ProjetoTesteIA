@@ -107,6 +107,7 @@ test("validação no navegador mostra erro abaixo do campo", async ({ page }) =>
     "As senhas não coincidem",
   );
   await expect(field(page, "Senha")).toBeFocused();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  // Scoped to the form: Next's own route announcer is also an alert.
+  await expect(page.locator("form").getByRole("alert")).toHaveCount(0);
   await expect(page).toHaveURL(/\/cadastro$/);
 });
