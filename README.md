@@ -63,8 +63,8 @@ plano gratuito basta).
 testes no Chromium. Não interfere no `npm run dev`. Na primeira vez, instale o
 navegador com `npx playwright install chromium`.
 
-Atenção: os testes rodam contra o seu projeto Supabase real e **criam cerca de
-quinze contas por execução**, com e-mails `e2e-…@example.com`. Apague-as de
+Atenção: os testes rodam contra o seu projeto Supabase real e **criam dez
+contas por execução**, com e-mails `e2e-…@example.com`. Apague-as de
 tempos em tempos em Authentication → Users. Se o Supabase recusar o domínio
 `example.com`, defina `E2E_EMAIL_DOMAIN` em `.env.local` com um domínio real.
 

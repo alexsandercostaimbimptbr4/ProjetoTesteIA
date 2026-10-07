@@ -101,7 +101,9 @@ tradicional:
 - O Next.js mantém a tela anterior montada e oculta depois de uma navegação.
   Por isso os campos dos formulários usam identificadores únicos (`useId`) e
   os formulários são limpos quando a tela é ocultada, para que uma senha
-  digitada não fique guardada.
+  digitada não fique guardada. Enquanto a tela está visível nada é apagado:
+  depois de um erro de validação no navegador, tudo o que foi digitado
+  continua nos campos.
 
 ### Organização do código
 
@@ -196,8 +198,8 @@ inválido, e cada mensagem fica associada ao seu campo para leitores de tela.
 
 Toda tradução de erro do Supabase passa por `lib/auth/errors.ts`. Um erro não
 mapeado vira a mensagem genérica de conexão; texto técnico em inglês nunca
-chega à tela. Falhas inesperadas nas actions são registradas no console do
-servidor.
+chega à tela. Sempre que o usuário recebe essa mensagem genérica, a causa é
+registrada no console do servidor, sem dados do formulário.
 
 Se a confirmação de e-mail for religada no Supabase, o cadastro mostra o aviso
 "Conta criada. Confirme seu e-mail para entrar.".
@@ -241,13 +243,14 @@ desenvolvimento. Roda contra o projeto Supabase real e cobre:
 - Login aceita e-mail com espaços e maiúsculas; logado em `/login` ou
   `/cadastro` vai para o dashboard.
 - E-mail já cadastrado mostra o erro com link para entrar.
-- Validação no navegador, foco e associação das mensagens aos campos.
+- Validação no navegador, foco, associação das mensagens aos campos, e
+  preservação do que foi digitado.
 - Erros e credenciais digitadas não ficam guardados ao sair ou trocar de tela.
 - Cookies de sessão HTTP-only.
 - Casca do dashboard em tela grande e pequena.
 - Página não encontrada em português.
 
-Cada execução cria cerca de quinze usuários com e-mails `e2e-…` únicos. A
+Cada execução cria dez usuários com e-mails `e2e-…` únicos. A
 limpeza é manual, pelo painel do Supabase (Authentication → Users), porque o
 projeto não usa a chave de administrador. O domínio desses e-mails vem de
 `E2E_EMAIL_DOMAIN` em `.env.local` (padrão `example.com`).

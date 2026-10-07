@@ -10,7 +10,7 @@ import { useClientValidation } from "./use-client-validation";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(login, {});
-  const { clientErrors, handleSubmit, resetOnHide } =
+  const { clientErrors, formRef, handleSubmit } =
     useClientValidation(loginSchema);
   const errors = clientErrors ?? state.fieldErrors ?? {};
   // The last server answer is stale once a new attempt starts.
@@ -18,7 +18,7 @@ export function LoginForm() {
 
   return (
     <form
-      ref={resetOnHide}
+      ref={formRef}
       action={formAction}
       onSubmit={handleSubmit}
       noValidate

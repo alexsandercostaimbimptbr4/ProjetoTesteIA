@@ -1,20 +1,27 @@
-import { useLayoutEffect, useState, type FormEvent } from "react";
+import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import type { z } from "zod";
 import { fieldErrorsFrom, type FieldErrors } from "@/lib/auth/form-state";
 
 // Validates in the browser before the Server Action runs. The server runs the
 // same schema again and remains the authority.
 export function useClientValidation(schema: z.ZodType) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [clientErrors, setClientErrors] = useState<FieldErrors | null>(null);
 
   // Next keeps a route mounted but hidden after the user leaves it, and React
-  // runs effect cleanups at that moment. Typed credentials and their errors
-  // must not wait there for whoever uses the browser next.
-  useLayoutEffect(() => () => setClientErrors(null), []);
-
-  function resetOnHide(form: HTMLFormElement | null) {
-    return () => form?.reset();
-  }
+  // runs layout-effect cleanups at that moment. Typed credentials and their
+  // errors must not wait there for whoever uses the browser next.
+  //
+  // This has to be an effect with no dependencies, not a callback ref: a ref
+  // callback that changes between renders is cleaned up on every re-render,
+  // which would erase the form each time a validation error is shown.
+  useLayoutEffect(() => {
+    const form = formRef.current;
+    return () => {
+      form?.reset();
+      setClientErrors(null);
+    };
+  }, []);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     const form = event.currentTarget;
@@ -36,5 +43,5 @@ export function useClientValidation(schema: z.ZodType) {
     firstInvalid?.focus();
   }
 
-  return { clientErrors, handleSubmit, resetOnHide };
+  return { clientErrors, formRef, handleSubmit };
 }

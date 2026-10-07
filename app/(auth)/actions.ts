@@ -2,13 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { translateAuthError } from "@/lib/auth/errors";
+import { AUTH_MESSAGES, translateAuthError } from "@/lib/auth/errors";
 import { fieldErrorsFrom, type AuthFormState } from "@/lib/auth/form-state";
 import { loginSchema, signupSchema } from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
 
 const text = (formData: FormData, key: string) =>
   String(formData.get(key) ?? "");
+
+// Translates a Supabase failure for the screen. When all the user gets is the
+// generic message, the cause goes to the server log; it never includes form
+// data.
+function failureMessage(error: unknown, context: "login" | "signup") {
+  const message = translateAuthError(error, context);
+  if (message === AUTH_MESSAGES.generic) {
+    console.error(`Falha inesperada (${context}):`, error);
+  }
+  return message;
+}
 
 export async function login(
   _prev: AuthFormState,
@@ -28,11 +39,9 @@ export async function login(
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
-    if (error) return { message: translateAuthError(error, "login"), values };
+    if (error) return { message: failureMessage(error, "login"), values };
   } catch (error) {
-    // The user only sees a generic message; the cause goes to the server log.
-    console.error("Falha inesperada no login:", error);
-    return { message: translateAuthError(error, "login"), values };
+    return { message: failureMessage(error, "login"), values };
   }
 
   // redirect() works by throwing, so it must stay outside the try/catch.
@@ -64,7 +73,7 @@ export async function signup(
       password: parsed.data.password,
       options: { data: { full_name: parsed.data.name } },
     });
-    if (error) return { message: translateAuthError(error, "signup"), values };
+    if (error) return { message: failureMessage(error, "signup"), values };
     if (!data.session) {
       // Only happens if "Confirm email" is enabled in the Supabase project.
       return {
@@ -73,8 +82,7 @@ export async function signup(
       };
     }
   } catch (error) {
-    console.error("Falha inesperada no cadastro:", error);
-    return { message: translateAuthError(error, "signup"), values };
+    return { message: failureMessage(error, "signup"), values };
   }
 
   revalidatePath("/", "layout");

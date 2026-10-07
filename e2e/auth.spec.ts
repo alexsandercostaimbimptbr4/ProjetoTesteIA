@@ -121,6 +121,28 @@ test("validação no navegador mostra erro abaixo do campo", async ({ page }) =>
   // Scoped to the form: Next's own route announcer is also an alert.
   await expect(page.locator("form").getByRole("alert")).toHaveCount(0);
   await expect(page).toHaveURL(/\/cadastro$/);
+  // Nothing the person typed is lost: they fix the field and resubmit.
+  await expect(field(page, "Nome")).toHaveValue("Ana");
+  await expect(field(page, "E-mail")).toHaveValue("ana@email.com");
+  await expect(field(page, "Senha")).toHaveValue("1234567");
+  await expect(field(page, "Confirmar senha")).toHaveValue("7654321");
+});
+
+test("corrigir o e-mail depois de um erro do servidor mantém o que foi digitado", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await field(page, "E-mail").fill("ninguem-cadastrado@example.com");
+  await field(page, "Senha").fill("senha-qualquer-123");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByText("E-mail ou senha incorretos")).toBeVisible();
+
+  await field(page, "E-mail").fill("ainda-incompleto@");
+  await field(page, "Senha").fill("senha-qualquer-123");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByText("Informe um e-mail válido")).toBeVisible();
+  await expect(field(page, "E-mail")).toHaveValue("ainda-incompleto@");
+  await expect(field(page, "Senha")).toHaveValue("senha-qualquer-123");
 });
 
 test("a sessão fica em cookies que o JavaScript não lê", async ({

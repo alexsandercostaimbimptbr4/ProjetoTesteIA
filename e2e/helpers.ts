@@ -59,9 +59,10 @@ export async function watchForDashboard(page: Page) {
   });
 }
 
-export async function sawDashboard(page: Page): Promise<boolean> {
+// Returns undefined when the observer was lost (a full reload), so a strict
+// `toBe(false)` fails loudly instead of passing by accident.
+export async function sawDashboard(page: Page): Promise<boolean | undefined> {
   return page.evaluate(
-    () =>
-      (window as unknown as { sawDashboard?: boolean }).sawDashboard === true,
+    () => (window as unknown as { sawDashboard?: boolean }).sawDashboard,
   );
 }
