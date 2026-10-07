@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { field, newUser, signOut, signUp } from "./helpers";
+import {
+  field,
+  newUser,
+  sawDashboard,
+  signOut,
+  signUp,
+  watchForDashboard,
+} from "./helpers";
 
 test("cadastro leva ao dashboard com o nome", async ({ page }) => {
   const user = newUser();
@@ -18,9 +25,12 @@ test("sair bloqueia o dashboard", async ({ page }) => {
 test("voltar depois de sair não mostra o dashboard", async ({ page }) => {
   await signUp(page, newUser());
   await signOut(page);
+  await watchForDashboard(page);
   await page.goBack();
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: /Olá,/ })).toBeHidden();
+  // Not even for a moment on the way back to /login.
+  expect(await sawDashboard(page)).toBe(false);
 });
 
 test("erro de login não reaparece depois de entrar e sair", async ({
@@ -39,6 +49,7 @@ test("erro de login não reaparece depois de entrar e sair", async ({
   await signOut(page);
   await expect(page.getByText("E-mail ou senha incorretos")).toBeHidden();
   await expect(field(page, "E-mail")).toHaveValue("");
+  await expect(field(page, "Senha")).toHaveValue("");
 });
 
 test("senha errada mostra erro e mantém o e-mail", async ({ page }) => {
@@ -125,4 +136,29 @@ test("a sessão fica em cookies que o JavaScript não lê", async ({
   expect(await page.evaluate(() => document.cookie)).not.toContain(
     "auth-token",
   );
+});
+
+test("senha digitada e não enviada não fica guardada ao trocar de tela", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await field(page, "E-mail").fill("ana@email.com");
+  await field(page, "Senha").fill("segredo-digitado-123");
+  await page.getByRole("link", { name: "Cadastre-se" }).click();
+  await expect(page).toHaveURL(/\/cadastro$/);
+  // The login screen may be kept in the page, hidden: no password field
+  // anywhere in the document may still hold what was typed.
+  expect(
+    await page
+      .locator('input[type="password"]')
+      .evaluateAll((inputs) =>
+        inputs.map((input) => (input as HTMLInputElement).value),
+      ),
+  ).not.toContain("segredo-digitado-123");
+
+  await field(page, "Senha").fill("outra-senha-456");
+  await page.getByRole("link", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(field(page, "Senha")).toHaveValue("");
+  await expect(field(page, "E-mail")).toHaveValue("");
 });

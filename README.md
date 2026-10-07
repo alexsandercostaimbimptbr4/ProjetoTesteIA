@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Painel CRM
 
-## Getting Started
+Projeto de aprendizado e portfólio: cadastro, login e logout com e-mail e
+senha, e um dashboard de CRM protegido. O dashboard é uma casca com dados de
+demonstração; os módulos reais (contatos, funil de vendas, tarefas, relatórios)
+ainda não existem.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js 16.4 (App Router, Cache Components) com TypeScript
+- Supabase Auth via `@supabase/ssr`
+- Tailwind CSS 4 e shadcn/ui
+- Zod para validação
+- Vitest e Playwright para testes
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Como rodar
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Você precisa de Node.js (testado com a versão 24) e de um projeto Supabase (o
+plano gratuito basta).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Instale as dependências:
 
-## Learn More
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. Copie `.env.example` para `.env.local` e preencha com a URL e a chave
+   publicável do seu projeto Supabase (Project Settings → API Keys):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   Use só a chave publicável. A chave secreta não é usada neste projeto.
 
-## Deploy on Vercel
+3. No painel do Supabase, desligue a confirmação de e-mail: Authentication →
+   Sign In / Providers → Email → **Confirm email** desligado → Save. Sem isso,
+   o cadastro cria a conta mas não entra no dashboard.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Suba o servidor de desenvolvimento:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   npm run dev
+   ```
+
+   Abra http://localhost:3000 e crie uma conta em "Cadastre-se".
+
+## Comandos
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | servidor de desenvolvimento na porta 3000 |
+| `npm run build` | build de produção |
+| `npm run start` | serve o build de produção |
+| `npm run lint` | ESLint |
+| `npm test` | testes unitários (Vitest) |
+| `npm run test:e2e` | testes de ponta a ponta (Playwright) |
+
+## Testes de ponta a ponta
+
+`npm run test:e2e` gera um build de produção, serve na porta 3100 e roda os
+testes no Chromium. Não interfere no `npm run dev`. Na primeira vez, instale o
+navegador com `npx playwright install chromium`.
+
+Atenção: os testes rodam contra o seu projeto Supabase real e **criam cerca de
+quinze contas por execução**, com e-mails `e2e-…@example.com`. Apague-as de
+tempos em tempos em Authentication → Users. Se o Supabase recusar o domínio
+`example.com`, defina `E2E_EMAIL_DOMAIN` em `.env.local` com um domínio real.
+
+## Como a proteção funciona
+
+- `proxy.ts` roda a cada requisição, renova a sessão e redireciona: deslogado
+  em `/` ou em qualquer endereço sob `/dashboard` vai para o login; logado em
+  `/`, `/login` ou `/cadastro` vai para o dashboard.
+- O layout do dashboard e a função que entrega os dados conferem a sessão de
+  novo no servidor.
+- A sessão fica em cookies HTTP-only, e o Supabase só é chamado pelo servidor.
+
+## Estrutura
+
+| Caminho | Conteúdo |
+|---|---|
+| `app/(auth)/` | telas de login e cadastro, e as actions de entrar, cadastrar e sair |
+| `app/dashboard/` | casca do dashboard |
+| `components/auth/`, `components/dashboard/` | formulários e peças do dashboard |
+| `components/ui/` | componentes gerados pelo shadcn/ui |
+| `lib/auth/` | validação, tradução de erros, regras de rota, usuário atual |
+| `lib/supabase/` | cliente Supabase do servidor e renovação da sessão |
+| `lib/dashboard/` | dados de demonstração |
+| `e2e/` | testes de ponta a ponta |
+| `docs/superpowers/` | spec e plano de implementação |
+
+O desenho completo está em
+[`docs/superpowers/specs/2026-10-07-login-dashboard-crm-design.md`](docs/superpowers/specs/2026-10-07-login-dashboard-crm-design.md).

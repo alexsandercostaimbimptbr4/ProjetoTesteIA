@@ -33,3 +33,35 @@ export async function signOut(page: Page) {
   await page.getByRole("menuitem", { name: "Sair" }).click();
   await expect(page).toHaveURL(/\/login$/);
 }
+
+// Records whether the dashboard greeting is ever on screen from now on, even
+// briefly. Survives client-side navigations; a full reload clears it, and then
+// the proxy has already redirected before anything rendered.
+export async function watchForDashboard(page: Page) {
+  await page.evaluate(() => {
+    const state = window as unknown as { sawDashboard?: boolean };
+    state.sawDashboard = false;
+    const check = () => {
+      for (const heading of document.querySelectorAll("h1")) {
+        if (
+          heading.textContent?.startsWith("Olá,") &&
+          heading.checkVisibility()
+        ) {
+          state.sawDashboard = true;
+        }
+      }
+    };
+    new MutationObserver(check).observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+  });
+}
+
+export async function sawDashboard(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () =>
+      (window as unknown as { sawDashboard?: boolean }).sawDashboard === true,
+  );
+}

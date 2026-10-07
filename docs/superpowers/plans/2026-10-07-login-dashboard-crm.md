@@ -10,6 +10,30 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-07-login-dashboard-crm-design.md`
 
+## Depois da execução: onde o código difere deste plano
+
+Este plano foi executado em 2026-10-07 e fica como registro do que se pretendia
+fazer. A spec foi atualizada e descreve o que existe; onde os dois divergem,
+vale a spec. As diferenças principais:
+
+- **Cache Components.** O Next.js 16.4 vem com `cacheComponents` ligado. A
+  leitura da sessão passou para `lib/auth/current-user.ts`, usada só dentro de
+  `<Suspense>`, e `app/page.tsx` redireciona sem ler a sessão.
+- **Testes de ponta a ponta.** Rodam contra um build de produção na porta
+  3100, com `reuseExistingServer: false`, e não contra `npm run dev` na 3000
+  como a Task 1 descreve. O `playwright.config.ts` carrega `.env.local`.
+- **Cliente Supabase do navegador.** `lib/supabase/client.ts` foi criado na
+  Task 3 e depois removido, porque nada o usava.
+- **Arquivos a mais.** `components/auth/form-field.tsx`, `submit-button.tsx` e
+  `use-client-validation.ts`; `lib/supabase/cookie-options.ts`;
+  `app/not-found.tsx`, `error.tsx` e `global-error.tsx`.
+- **Regras acrescentadas nas revisões.** Cookies de sessão HTTP-only, nome
+  limitado a 100 caracteres, senha limitada a 72 bytes, mensagens próprias
+  para recusas permanentes do Supabase, dados do dashboard entregues só com
+  sessão, e formulários limpos quando a tela é ocultada.
+- **Contagem de testes.** Os números de "Expected" nas tarefas (34 unitários,
+  12 de ponta a ponta) eram os do fim do plano; a suíte cresceu depois.
+
 ## Global Constraints
 
 - Toda a interface e todas as mensagens de erro em português. Texto técnico em inglês nunca chega à tela.

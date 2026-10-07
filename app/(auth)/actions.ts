@@ -30,6 +30,8 @@ export async function login(
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
     if (error) return { message: translateAuthError(error, "login"), values };
   } catch (error) {
+    // The user only sees a generic message; the cause goes to the server log.
+    console.error("Falha inesperada no login:", error);
     return { message: translateAuthError(error, "login"), values };
   }
 
@@ -71,6 +73,7 @@ export async function signup(
       };
     }
   } catch (error) {
+    console.error("Falha inesperada no cadastro:", error);
     return { message: translateAuthError(error, "signup"), values };
   }
 

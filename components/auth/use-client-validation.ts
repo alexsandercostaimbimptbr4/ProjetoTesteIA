@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import type { z } from "zod";
 import { fieldErrorsFrom, type FieldErrors } from "@/lib/auth/form-state";
 
@@ -6,6 +6,15 @@ import { fieldErrorsFrom, type FieldErrors } from "@/lib/auth/form-state";
 // same schema again and remains the authority.
 export function useClientValidation(schema: z.ZodType) {
   const [clientErrors, setClientErrors] = useState<FieldErrors | null>(null);
+
+  // Next keeps a route mounted but hidden after the user leaves it, and React
+  // runs effect cleanups at that moment. Typed credentials and their errors
+  // must not wait there for whoever uses the browser next.
+  useLayoutEffect(() => () => setClientErrors(null), []);
+
+  function resetOnHide(form: HTMLFormElement | null) {
+    return () => form?.reset();
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     const form = event.currentTarget;
@@ -27,5 +36,5 @@ export function useClientValidation(schema: z.ZodType) {
     firstInvalid?.focus();
   }
 
-  return { clientErrors, handleSubmit };
+  return { clientErrors, handleSubmit, resetOnHide };
 }

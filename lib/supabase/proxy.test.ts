@@ -8,6 +8,8 @@ type SetAll = (
 
 const fake = vi.hoisted(() => ({
   claims: null as object | null,
+  // Extra cookie writes for the test at hand, e.g. a sign-out removal.
+  extra: [] as { name: string; value: string; options: object }[],
 }));
 
 // Stands in for Supabase refreshing a session: it writes cookies in two
@@ -23,7 +25,10 @@ vi.mock("@supabase/ssr", () => ({
         options.cookies.setAll([{ name: "sb-a", value: "1", options: {} }], {
           "Cache-Control": "private, no-store",
         });
-        options.cookies.setAll([{ name: "sb-b", value: "2", options: {} }], {});
+        options.cookies.setAll(
+          [{ name: "sb-b", value: "2", options: {} }, ...fake.extra],
+          {},
+        );
         return { data: fake.claims ? { claims: fake.claims } : null };
       },
     },
@@ -34,6 +39,7 @@ import { updateSession } from "./proxy";
 
 beforeEach(() => {
   fake.claims = null;
+  fake.extra = [];
 });
 
 it("mantém cookies e cabeçalhos de cache quando deixa a requisição passar", async () => {
@@ -57,4 +63,23 @@ it("leva cookies e cabeçalhos de cache junto no redirecionamento", async () => 
   expect(response.headers.get("cache-control")).toBe("private, no-store");
   expect(response.cookies.get("sb-a")?.value).toBe("1");
   expect(response.cookies.get("sb-b")?.value).toBe("2");
+});
+
+it("repassa a remoção de um cookie com as opções que vieram", async () => {
+  fake.extra = [
+    { name: "sb-old", value: "", options: { maxAge: 0, path: "/" } },
+  ];
+  const request = new NextRequest("http://localhost/dashboard", {
+    headers: { cookie: "sb-old=stale" },
+  });
+  const response = await updateSession(request);
+
+  const removal = response.headers
+    .getSetCookie()
+    .find((header) => header.startsWith("sb-old="));
+  expect(removal).toContain("Max-Age=0");
+  expect(removal).toContain("Path=/");
+  // Server Components rendered after the proxy must see the new value too.
+  expect(request.cookies.get("sb-old")?.value).toBe("");
+  expect(request.cookies.get("sb-a")?.value).toBe("1");
 });
