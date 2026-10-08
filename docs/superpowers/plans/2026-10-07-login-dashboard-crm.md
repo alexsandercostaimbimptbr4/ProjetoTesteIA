@@ -27,7 +27,8 @@ vale a spec. As diferenças principais:
 - **Arquivos a mais.** `components/auth/form-field.tsx`, `submit-button.tsx`,
   `use-client-validation.ts` e `use-reset-key-on-hide.ts`; `lib/supabase/cookie-options.ts`;
   `app/not-found.tsx`, `error.tsx` e `global-error.tsx`.
-- **Regras acrescentadas nas revisões.** Cookies de sessão HTTP-only, nome
+- **Regras acrescentadas nas revisões.** Cookies de sessão HTTP-only (e
+  `Secure` no build de produção), nome
   limitado a 100 caracteres, senha limitada a 72 bytes, mensagens próprias
   para recusas permanentes do Supabase, dados do dashboard entregues só com
   sessão, e formulários limpos quando a tela é ocultada.

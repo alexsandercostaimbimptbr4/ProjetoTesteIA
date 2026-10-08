@@ -95,7 +95,9 @@ Os nomes das telas abaixo podem variar conforme a versão do Easypanel.
    build falha com uma mensagem clara se elas faltarem, e é preciso fazer um
    novo deploy (não só reiniciar) sempre que mudarem.
 4. Em **Domains**, adicione o domínio com HTTPS e a porta do contêiner
-   **3000**.
+   **3000**. O HTTPS é obrigatório: por HTTP fora de `localhost` o navegador
+   descarta os cookies de sessão, e o login volta para a tela de entrada sem
+   mensagem de erro.
 5. Clique em **Deploy**.
 
 Para testar a imagem na sua máquina, com Docker instalado:
@@ -108,7 +110,10 @@ docker build \
 docker run --rm -p 3000:3000 painel-crm
 ```
 
-Depois abra http://localhost:3000.
+Depois abra http://localhost:3000. Use exatamente `localhost`, no Chrome ou
+no Firefox: os cookies de sessão são `Secure`, e por HTTP o navegador só os
+aceita nesse endereço. Se depois o `npm run dev` não mantiver o login ou o
+logout, apague os cookies de `localhost`.
 
 ## Como a proteção funciona
 
@@ -118,7 +123,8 @@ Depois abra http://localhost:3000.
   `/`, `/login` ou `/cadastro` vai para o dashboard.
 - O layout do dashboard e a função que entrega os dados conferem a sessão de
   novo no servidor.
-- A sessão fica em cookies HTTP-only, e o Supabase só é chamado pelo servidor.
+- A sessão fica em cookies HTTP-only (e `Secure` no build de produção), e o
+  Supabase só é chamado pelo servidor.
 
 ## Estrutura
 

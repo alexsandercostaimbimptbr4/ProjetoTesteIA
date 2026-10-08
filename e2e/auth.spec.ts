@@ -145,7 +145,7 @@ test("corrigir o e-mail depois de um erro do servidor mantém o que foi digitado
   await expect(field(page, "Senha")).toHaveValue("senha-qualquer-123");
 });
 
-test("a sessão fica em cookies que o JavaScript não lê", async ({
+test("a sessão fica em cookies Secure que o JavaScript não lê", async ({
   page,
   context,
 }) => {
@@ -154,7 +154,11 @@ test("a sessão fica em cookies que o JavaScript não lê", async ({
     cookie.name.includes("auth-token"),
   );
   expect(session.length).toBeGreaterThan(0);
-  for (const cookie of session) expect(cookie.httpOnly).toBe(true);
+  for (const cookie of session) {
+    expect(cookie.httpOnly).toBe(true);
+    // The suite runs a production build, where the cookies are also Secure.
+    expect(cookie.secure).toBe(true);
+  }
   expect(await page.evaluate(() => document.cookie)).not.toContain(
     "auth-token",
   );

@@ -71,9 +71,9 @@ interna do Supabase Auth, e o nome vai nos metadados do usuário.
 
 1. O formulário envia os dados para uma Server Action.
 2. A action valida com Zod e chama o Supabase.
-3. O Supabase devolve a sessão, gravada em cookies HTTP-only. A biblioteca
-   não liga essa opção por padrão; ela é definida em
-   `lib/supabase/cookie-options.ts`.
+3. O Supabase devolve a sessão, gravada em cookies HTTP-only (e `Secure` no
+   build de produção). A biblioteca não liga essas opções por padrão; elas são
+   definidas em `lib/supabase/cookie-options.ts`.
 4. A cada requisição de página (ele não roda para os arquivos estáticos do
    Next.js nem para imagens), o interceptador `proxy.ts` (o antigo `middleware.ts`,
    renomeado no Next.js 16) renova a sessão e aplica os redirecionamentos:
@@ -116,7 +116,7 @@ tradicional:
 | `proxy.ts` | chama `updateSession` e define em quais caminhos o proxy roda |
 | `lib/supabase/server.ts` | cliente Supabase para Server Components e actions |
 | `lib/supabase/proxy.ts` | renovação da sessão e redirecionamentos, preservando cookies e cabeçalhos de cache |
-| `lib/supabase/cookie-options.ts` | opções dos cookies de sessão (HTTP-only) |
+| `lib/supabase/cookie-options.ts` | opções dos cookies de sessão (HTTP-only, e `Secure` no build de produção) |
 | `lib/auth/schemas.ts` | esquemas Zod de login e cadastro |
 | `lib/auth/errors.ts` | tradução dos erros do Supabase para mensagens em português |
 | `lib/auth/routes.ts` | regra de redirecionamento por rota |
@@ -218,7 +218,11 @@ proxy falha com a página de erro padrão do servidor, em inglês.
 - Chaves em `.env.local`, fora do git, com um `.env.example` sem valores.
 - Só a chave publicável do Supabase é usada. A chave de administrador não
   entra no projeto.
-- Cookies de sessão HTTP-only: scripts da página não leem os tokens.
+- Cookies de sessão HTTP-only: scripts da página não leem os tokens. No build
+  de produção eles também são `Secure`: o navegador só os aceita e envia por
+  HTTPS (ou em `http://localhost`, no Chrome e no Firefox). Por HTTP em
+  qualquer outro endereço o login volta para a tela de entrada sem mensagem
+  de erro.
 - Respostas que gravam a sessão levam os cabeçalhos que proíbem cache
   compartilhado, inclusive nos redirecionamentos.
 - A senha nunca é devolvida ao navegador depois de um envio com erro.
@@ -237,6 +241,7 @@ Unitários (Vitest), em `lib/**/*.test.ts`, com `npm test`:
 - `getCurrentUser`: redireciona sem sessão.
 - Dados do dashboard: não são entregues sem sessão.
 - Proxy: cookies, remoção de cookies e cabeçalhos de cache preservados.
+- Opções dos cookies de sessão: `Secure` só no build de produção.
 
 Ponta a ponta (Playwright), em `e2e/`, com `npm run test:e2e`. A suíte gera
 um build de produção e o serve na porta 3100, sem usar o servidor de
@@ -252,7 +257,7 @@ desenvolvimento. Roda contra o projeto Supabase real e cobre:
 - Validação no navegador, foco, associação das mensagens aos campos, e
   preservação do que foi digitado.
 - Erros e credenciais digitadas não ficam guardados ao sair ou trocar de tela.
-- Cookies de sessão HTTP-only.
+- Cookies de sessão HTTP-only e `Secure`.
 - Casca do dashboard em tela grande e pequena.
 - Página não encontrada em português.
 
