@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { loginSchema, signupSchema } from "./schemas";
+import {
+  loginSchema,
+  recoverSchema,
+  resetSchema,
+  signupSchema,
+} from "./schemas";
 
 const valid = {
   name: "Ana Souza",
@@ -139,4 +144,47 @@ describe("loginSchema", () => {
       ),
     ).toBe("Informe sua senha");
   });
+});
+
+describe("recoverSchema", () => {
+  it("normaliza o e-mail", () =>
+    expect(recoverSchema.parse({ email: "  Ana@Email.com " }).email).toBe(
+      "ana@email.com",
+    ));
+
+  it("rejeita e-mail inválido", () =>
+    expect(
+      firstError(recoverSchema.safeParse({ email: "ana@" }), "email"),
+    ).toBe("Informe um e-mail válido"));
+});
+
+describe("resetSchema", () => {
+  const reset = { password: "senha1234", confirmPassword: "senha1234" };
+
+  it("aceita senha e confirmação iguais", () =>
+    expect(resetSchema.safeParse(reset).success).toBe(true));
+
+  it("aplica as regras de senha do cadastro", () => {
+    expect(
+      firstError(
+        resetSchema.safeParse({ password: "curta", confirmPassword: "curta" }),
+        "password",
+      ),
+    ).toBe("A senha deve ter no mínimo 8 caracteres");
+    const long = "ã".repeat(40);
+    expect(
+      firstError(
+        resetSchema.safeParse({ password: long, confirmPassword: long }),
+        "password",
+      ),
+    ).toBe("A senha é longa demais: letras acentuadas contam em dobro");
+  });
+
+  it("exige confirmação igual", () =>
+    expect(
+      firstError(
+        resetSchema.safeParse({ ...reset, confirmPassword: "outra-senha" }),
+        "confirmPassword",
+      ),
+    ).toBe("As senhas não coincidem"));
 });

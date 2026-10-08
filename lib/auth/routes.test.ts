@@ -9,6 +9,12 @@ it.each([
   ["/", false, "/login"],
   ["/login", true, "/dashboard"],
   ["/cadastro", true, "/dashboard"],
+  // The reset pages stay reachable with a session: the link may belong to
+  // another account, and an expired one leads back to asking for a new one.
+  ["/recuperar-senha", false, null],
+  ["/recuperar-senha", true, null],
+  ["/redefinir-senha", false, null],
+  ["/redefinir-senha", true, null],
   ["/", true, "/dashboard"],
   ["/dashboard", true, null],
   ["/dashboard/contatos", true, null],

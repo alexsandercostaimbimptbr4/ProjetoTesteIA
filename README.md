@@ -1,9 +1,9 @@
 # Painel CRM
 
-Projeto de aprendizado e portfólio: cadastro, login e logout com e-mail e
-senha, e um dashboard de CRM protegido. O dashboard é uma casca com dados de
-demonstração; os módulos reais (contatos, funil de vendas, tarefas, relatórios)
-ainda não existem.
+Projeto de aprendizado e portfólio: cadastro, login, logout e recuperação de
+senha com e-mail e senha, e um dashboard de CRM protegido. O dashboard é uma
+casca com dados de demonstração; os módulos reais (contatos, funil de vendas,
+tarefas, relatórios) ainda não existem.
 
 ## Stack
 
@@ -115,6 +115,51 @@ no Firefox: os cookies de sessão são `Secure`, e por HTTP o navegador só os
 aceita nesse endereço. Se depois o `npm run dev` não mantiver o login ou o
 logout, apague os cookies de `localhost`.
 
+## Recuperação de senha
+
+Em "Esqueci minha senha", na tela de login, a pessoa informa o e-mail e
+recebe um link para `/redefinir-senha`, onde cria a nova senha e já entra no
+dashboard. O link vale uma vez só e é conferido apenas quando o formulário é
+enviado: abrir o link não loga ninguém.
+
+Para os e-mails saírem, configure três coisas no painel do Supabase (os nomes
+dos menus podem variar):
+
+1. **Endereço do site.** Authentication → URL Configuration → **Site URL**:
+   o endereço público do app, sem barra no fim. O link do e-mail é montado
+   com ele.
+2. **Modelo do e-mail.** Authentication → Emails → Templates → **Reset
+   Password**. Troque o assunto por `Criar uma nova senha` e o corpo por:
+
+   ```html
+   <h2>Criar uma nova senha</h2>
+   <p>Recebemos um pedido para trocar a senha da sua conta no Painel CRM.</p>
+   <p>
+     <a href="{{ .SiteURL }}/redefinir-senha?token_hash={{ .TokenHash }}"
+       >Criar nova senha</a
+     >
+   </p>
+   <p>Se não foi você, ignore este e-mail: sua senha continua a mesma.</p>
+   ```
+
+3. **Servidor de e-mail próprio.** Authentication → Emails → **SMTP
+   Settings**. Sem ele, o Supabase só entrega mensagens aos membros da
+   organização dona do projeto, e poucas por hora: serve para testar com o
+   seu próprio e-mail, não para usuários reais.
+
+Se o projeto Supabase exigir senhas mais fortes que as do app (8 a 72
+caracteres), deixe as duas regras iguais: uma senha recusada só pelo Supabase
+gasta o link, e a pessoa precisa pedir outro.
+
+A tela responde sempre "Se existir uma conta com este e-mail, enviamos um
+link…", exista a conta ou não. Quando o Supabase recusa o envio (endereço não
+autorizado, limite de envios), o motivo aparece só no log do servidor, como
+`Falha ao pedir o e-mail de recuperação`, com o código do erro.
+
+Com o **Site URL** apontando para o site publicado, o link do e-mail abre o
+site publicado. Para testar no `npm run dev`, copie o link e troque o
+endereço por `http://localhost:3000`.
+
 ## Como a proteção funciona
 
 - `proxy.ts` roda a cada requisição de página (não para arquivos estáticos
@@ -130,11 +175,11 @@ logout, apague os cookies de `localhost`.
 
 | Caminho | Conteúdo |
 |---|---|
-| `app/(auth)/` | telas de login e cadastro, e as actions de entrar, cadastrar e sair |
+| `app/(auth)/` | telas de login, cadastro e recuperação de senha, e as actions de entrar, cadastrar, recuperar a senha e sair |
 | `app/dashboard/` | casca do dashboard |
 | `components/auth/`, `components/dashboard/` | formulários e peças do dashboard |
 | `components/ui/` | componentes gerados pelo shadcn/ui |
-| `lib/auth/` | validação, tradução de erros, regras de rota, usuário atual |
+| `lib/auth/` | validação, tradução de erros, regras de rota, usuário atual, troca de senha pelo link |
 | `lib/supabase/` | cliente Supabase do servidor e renovação da sessão |
 | `lib/dashboard/` | dados de demonstração |
 | `e2e/` | testes de ponta a ponta |

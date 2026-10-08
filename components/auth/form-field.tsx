@@ -20,7 +20,7 @@ export function FormField({
   error,
 }: FormFieldProps) {
   // Next keeps previous routes mounted but hidden, so ids must be unique
-  // across the login and signup forms.
+  // across the auth forms.
   const id = useId();
   const errorId = `${id}-error`;
 

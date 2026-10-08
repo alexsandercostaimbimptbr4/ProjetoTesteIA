@@ -2,22 +2,22 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { login } from "@/app/(auth)/actions";
-import { loginSchema } from "@/lib/auth/schemas";
+import { recoverPassword } from "@/app/(auth)/actions";
+import { recoverSchema } from "@/lib/auth/schemas";
 import { FormField } from "./form-field";
 import { SubmitButton } from "./submit-button";
 import { useClientValidation } from "./use-client-validation";
 import { useResetKeyOnHide } from "./use-reset-key-on-hide";
 
-export function LoginForm() {
+export function RecoverForm() {
   const resetKey = useResetKeyOnHide();
-  return <LoginFields key={resetKey} />;
+  return <RecoverFields key={resetKey} />;
 }
 
-function LoginFields() {
-  const [state, formAction, pending] = useActionState(login, {});
+function RecoverFields() {
+  const [state, formAction, pending] = useActionState(recoverPassword, {});
   const { clientErrors, formRef, handleSubmit } =
-    useClientValidation(loginSchema);
+    useClientValidation(recoverSchema);
   const errors = clientErrors ?? state.fieldErrors ?? {};
   // The last server answer is stale once a new attempt starts.
   const showServerState = !clientErrors && !pending;
@@ -35,6 +35,18 @@ function LoginFields() {
           {state.message}
         </p>
       ) : null}
+      {/* Always in the page, so screen readers announce the text when it
+          arrives; kept out of the layout while empty. */}
+      <p
+        role="status"
+        className={
+          showServerState && state.info
+            ? "text-sm text-muted-foreground"
+            : "sr-only"
+        }
+      >
+        {showServerState ? state.info : null}
+      </p>
       <FormField
         key={`email-${state.values?.email ?? ""}`}
         name="email"
@@ -44,26 +56,11 @@ function LoginFields() {
         defaultValue={state.values?.email}
         error={errors.email}
       />
-      <FormField
-        name="password"
-        label="Senha"
-        type="password"
-        autoComplete="current-password"
-        error={errors.password}
-      />
-      <p className="-mt-2 text-right text-sm">
-        <Link
-          href="/recuperar-senha"
-          className="text-muted-foreground underline"
-        >
-          Esqueci minha senha
-        </Link>
-      </p>
-      <SubmitButton pending={pending}>Entrar</SubmitButton>
+      <SubmitButton pending={pending}>Enviar link</SubmitButton>
       <p className="text-center text-sm text-muted-foreground">
-        Ainda não tem conta?{" "}
-        <Link href="/cadastro" className="text-foreground underline">
-          Cadastre-se
+        Lembrou a senha?{" "}
+        <Link href="/login" className="text-foreground underline">
+          Entrar
         </Link>
       </p>
     </form>

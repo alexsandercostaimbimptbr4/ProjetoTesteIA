@@ -31,8 +31,8 @@ export function useClientValidation(schema: z.ZodType) {
         .forEach((input) => {
           input.value = "";
         });
-      // Redundant when the form is keyed with useResetKeyOnHide, as both
-      // forms are; kept so this hook is correct on its own.
+      // Redundant when the form is keyed with useResetKeyOnHide, as every
+      // auth form is; kept so this hook is correct on its own.
       setClientErrors(null);
     };
   }, []);

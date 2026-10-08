@@ -2,10 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { AUTH_MESSAGES, translateAuthError } from "@/lib/auth/errors";
+import {
+  AUTH_MESSAGES,
+  translateAuthError,
+  type AuthContext,
+} from "@/lib/auth/errors";
 import { fieldErrorsFrom, type AuthFormState } from "@/lib/auth/form-state";
-import { loginSchema, signupSchema } from "@/lib/auth/schemas";
+import {
+  redeemResetLink,
+  requestPasswordReset,
+  type RedeemResult,
+} from "@/lib/auth/password-reset";
+import {
+  loginSchema,
+  recoverSchema,
+  resetSchema,
+  signupSchema,
+} from "@/lib/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
+import { createStatelessClient } from "@/lib/supabase/stateless";
 
 const text = (formData: FormData, key: string) =>
   String(formData.get(key) ?? "");
@@ -13,7 +28,7 @@ const text = (formData: FormData, key: string) =>
 // Translates a Supabase failure for the screen. When all the user gets is the
 // generic message, the cause goes to the server log. Only the error object
 // is logged; the form data is never passed to the log.
-function failureMessage(error: unknown, context: "login" | "signup") {
+function failureMessage(error: unknown, context: AuthContext) {
   const message = translateAuthError(error, context);
   if (message === AUTH_MESSAGES.generic) {
     console.error(`Falha inesperada (${context}):`, error);
@@ -84,6 +99,62 @@ export async function signup(
   } catch (error) {
     return { message: failureMessage(error, "signup"), values };
   }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
+export async function recoverPassword(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const raw = { email: text(formData, "email") };
+  const values = { email: raw.email };
+
+  const parsed = recoverSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { fieldErrors: fieldErrorsFrom(parsed.error), values };
+  }
+
+  // No cookies are read or written here, so the response is the same
+  // whether or not the account exists.
+  const outcome = await requestPasswordReset(
+    createStatelessClient().auth,
+    parsed.data.email,
+  );
+  if (outcome === "unavailable") {
+    return { message: AUTH_MESSAGES.generic, values };
+  }
+  // The typed address is not sent back: the form empties itself.
+  return { info: AUTH_MESSAGES.recoverySent };
+}
+
+export async function resetPassword(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  // Validated before the link is touched: a link works once, and a typo in
+  // the confirmation must not cost it.
+  const parsed = resetSchema.safeParse({
+    password: text(formData, "password"),
+    confirmPassword: text(formData, "confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { fieldErrors: fieldErrorsFrom(parsed.error) };
+  }
+
+  let result: RedeemResult;
+  try {
+    const supabase = await createClient();
+    result = await redeemResetLink(
+      supabase.auth,
+      text(formData, "tokenHash"),
+      parsed.data.password,
+    );
+  } catch (error) {
+    return { message: failureMessage(error, "reset") };
+  }
+  if (!result.ok) return { message: result.message };
 
   revalidatePath("/", "layout");
   redirect("/dashboard");

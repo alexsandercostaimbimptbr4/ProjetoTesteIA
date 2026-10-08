@@ -1,3 +1,7 @@
+> Nota (2026-10-08): este plano é o registro da primeira versão. A
+> recuperação de senha, que ele lista como fora do escopo, foi acrescentada
+> depois; o estado atual está na spec.
+
 # Login e casca do dashboard de CRM — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

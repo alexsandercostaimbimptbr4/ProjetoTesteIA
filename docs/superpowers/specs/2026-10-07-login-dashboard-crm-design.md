@@ -15,6 +15,8 @@ Sucesso significa:
 
 - Quem não está logado não consegue ver o dashboard.
 - Cadastro, login e logout funcionam de ponta a ponta contra o Supabase.
+- Quem esqueceu a senha consegue criar outra sozinho, por um link enviado
+  ao e-mail.
 - O dashboard mostra o nome e o e-mail de quem está logado.
 - A interface e as mensagens de erro estão em português.
 - Os testes unitários e de ponta a ponta passam.
@@ -26,6 +28,8 @@ Dentro:
 - Cadastro com nome, e-mail e senha.
 - Login com e-mail e senha.
 - Logout.
+- Recuperação de senha por link enviado ao e-mail (acrescentada em
+  2026-10-08).
 - Proteção de rotas no servidor.
 - Casca do dashboard: menu lateral, cabeçalho com usuário, cartões de
   indicadores e lista de atividades, tudo com dados de exemplo.
@@ -35,13 +39,13 @@ Dentro:
 
 Fora:
 
-- Recuperação de senha e confirmação de e-mail.
+- Confirmação de e-mail.
 - Login social.
 - Perfis de acesso (admin, usuário comum).
 - Módulos reais do CRM (contatos, funil, tarefas, relatórios).
-- Endurecimento para uso público: confirmação de e-mail, recuperação de senha
-  e proteção contra cadastros automáticos. O repositório traz um `Dockerfile`
-  para o Easypanel (passos no README), mas sem esses itens.
+- Endurecimento para uso público: confirmação de e-mail e proteção contra
+  cadastros automáticos. O repositório traz um `Dockerfile` para o Easypanel
+  (passos no README), mas sem esses itens.
 
 ## Stack
 
@@ -65,6 +69,8 @@ interna do Supabase Auth, e o nome vai nos metadados do usuário.
 | `/` | qualquer um | redireciona para `/dashboard` se logado, senão para `/login` |
 | `/login` | só deslogado | formulário de e-mail e senha |
 | `/cadastro` | só deslogado | formulário de criação de conta |
+| `/recuperar-senha` | qualquer um | pedido do link para criar uma nova senha |
+| `/redefinir-senha` | qualquer um | formulário da nova senha, aberto pelo link do e-mail |
 | `/dashboard` | só logado | casca do CRM |
 
 ### Fluxo da sessão
@@ -91,6 +97,38 @@ servidor: não existe cliente Supabase rodando no navegador.
 A confirmação de e-mail fica desligada no projeto Supabase. O cadastro deixa a
 pessoa logada e a leva direto ao dashboard.
 
+### Recuperação de senha
+
+1. Em `/recuperar-senha` a pessoa informa o e-mail. A action pede ao Supabase
+   o envio do link e responde sempre o mesmo aviso, exista a conta ou não.
+   Recusas do Supabase (endereço que ele não aceita, limite de envios) também
+   recebem esse aviso; o código do erro vai para o log do servidor. Só o
+   Supabase fora do ar (sem conexão ou erro 5xx) aparece como erro. O pedido
+   usa um cliente Supabase sem cookies (`lib/supabase/stateless.ts`), para a
+   resposta não variar conforme a conta exista.
+2. O e-mail leva a `/redefinir-senha?token_hash=…`. O modelo do e-mail é
+   configurado no painel do Supabase para montar esse endereço.
+3. A página entrega o `token_hash` ao formulário num campo oculto. Sem ele,
+   mostra o aviso de link vencido no lugar do formulário.
+4. No envio, a action valida as senhas e só então gasta o link
+   (`verifyOtp`), troca a senha (`updateUser`), encerra as outras sessões
+   da conta e redireciona para `/dashboard`, já com a sessão aberta.
+
+O link só é conferido no envio do formulário, não ao abrir a página. Assim,
+abrir o link não deixa ninguém logado antes de trocar a senha, e leitores de
+e-mail que seguem links sozinhos não o gastam. O custo: um link vencido só é
+descoberto depois de digitar a nova senha.
+
+Se a troca falha depois de o link ter sido gasto (por exemplo, senha recusada
+pelo Supabase como fraca), a sessão aberta pelo link é encerrada e a pessoa
+precisa pedir outro. Pedir a mesma senha que a conta já tem conta como troca
+feita. A action valida as senhas antes de tocar no link, para um erro de
+digitação não custar o link.
+
+As duas telas ficam abertas também para quem está logado: o link pode ser
+aberto num navegador com outra conta aberta (a troca substitui essa sessão),
+e de um link vencido a pessoa precisa conseguir pedir outro.
+
 ### Cache Components
 
 Com Cache Components ligado, três coisas mudam em relação a um app Next.js
@@ -99,6 +137,8 @@ tradicional:
 - Ler a sessão só é permitido em tempo de requisição. `getCurrentUser()`
   chama `connection()` antes de validar a sessão e só é usado dentro de um
   `<Suspense>`.
+- `/redefinir-senha` lê o `token_hash` do endereço, que só existe em tempo de
+  requisição: a leitura fica num componente dentro de um `<Suspense>`.
 - `app/page.tsx` não lê a sessão: redireciona para `/dashboard`, que confere a
   sessão. O proxy já trata `/` antes disso.
 - O Next.js mantém a tela anterior montada e oculta depois de uma navegação.
@@ -116,6 +156,7 @@ tradicional:
 | `proxy.ts` | chama `updateSession` e define em quais caminhos o proxy roda |
 | `lib/supabase/server.ts` | cliente Supabase para Server Components e actions |
 | `lib/supabase/proxy.ts` | renovação da sessão e redirecionamentos, preservando cookies e cabeçalhos de cache |
+| `lib/supabase/stateless.ts` | cliente Supabase sem sessão nem cookies, usado no pedido do link |
 | `lib/supabase/cookie-options.ts` | opções dos cookies de sessão (HTTP-only, e `Secure` no build de produção) |
 | `lib/auth/schemas.ts` | esquemas Zod de login e cadastro |
 | `lib/auth/errors.ts` | tradução dos erros do Supabase para mensagens em português |
@@ -123,12 +164,13 @@ tradicional:
 | `lib/auth/user.ts` | nome e e-mail de exibição a partir dos dados da sessão |
 | `lib/auth/current-user.ts` | usuário logado, ou redirecionamento para `/login` |
 | `lib/auth/form-state.ts` | formato do estado devolvido pelas actions |
+| `lib/auth/password-reset.ts` | pedido do link e troca da senha pelo link, sem depender do Next.js |
 | `lib/dashboard/sample-data.ts` | dados de exemplo, entregues só com sessão válida |
-| `app/(auth)/actions.ts` | actions de entrar, cadastrar e sair |
-| `app/(auth)/layout.tsx`, `login/`, `cadastro/` | telas de autenticação |
+| `app/(auth)/actions.ts` | actions de entrar, cadastrar, pedir o link, trocar a senha e sair |
+| `app/(auth)/layout.tsx`, `login/`, `cadastro/`, `recuperar-senha/`, `redefinir-senha/` | telas de autenticação |
 | `app/dashboard/` | layout da casca e página Visão geral |
 | `app/not-found.tsx`, `error.tsx`, `global-error.tsx` | telas de erro em português |
-| `components/auth/` | `LoginForm`, `SignupForm`, `FormField`, `SubmitButton`, `useClientValidation`, `useResetKeyOnHide` |
+| `components/auth/` | `LoginForm`, `SignupForm`, `RecoverForm`, `ResetForm`, `NewLinkNotice`, `FormField`, `SubmitButton`, `useClientValidation`, `useResetKeyOnHide` |
 | `components/dashboard/` | `Sidebar`, `Header`, `UserMenu`, `StatCard`, `RecentActivity` |
 | `components/ui/` | componentes gerados pelo shadcn/ui |
 | `Dockerfile`, `.dockerignore` | imagem de produção (build standalone, `node server.js` na porta 3000) |
@@ -144,6 +186,7 @@ altera só `lib/dashboard/`.
 
 - Cartão centralizado com o nome do sistema (`Painel CRM`), campos de e-mail e
   senha e botão "Entrar".
+- Link "Esqueci minha senha", abaixo do campo de senha.
 - Link "Ainda não tem conta? Cadastre-se".
 - Durante o envio, o botão fica desabilitado e mostra carregamento.
 
@@ -152,6 +195,19 @@ altera só `lib/dashboard/`.
 - Mesmo visual, com nome, e-mail, senha e confirmação de senha, e botão
   "Criar conta".
 - Link "Já tem conta? Entrar".
+
+### Recuperar senha
+
+- Mesmo visual, com o campo de e-mail e o botão "Enviar link".
+- Depois do envio, o aviso "Se existir uma conta com este e-mail, enviamos um
+  link para criar uma nova senha." e o campo vazio.
+- Link "Lembrou a senha? Entrar".
+
+### Nova senha
+
+- Mesmo visual, com nova senha, confirmação e botão "Salvar nova senha".
+- Aberta sem link, mostra só "Este link expirou ou já foi usado", com o
+  atalho "Pedir um novo link".
 
 ### Dashboard
 
@@ -178,8 +234,9 @@ de novo no servidor, que é a autoridade.
 
 - Nome: obrigatório, no máximo 100 caracteres.
 - E-mail: formato válido. Espaços nas pontas e maiúsculas são normalizados.
-- Senha, no cadastro: de 8 a 72 caracteres, e no máximo 72 bytes (o limite do
-  bcrypt no Supabase; letras acentuadas ocupam mais de um byte).
+- Senha, no cadastro e na troca de senha: de 8 a 72 caracteres, e no máximo
+  72 bytes (o limite do bcrypt no Supabase; letras acentuadas ocupam mais de
+  um byte).
 - Senha, no login: apenas obrigatória, para não trancar contas criadas com
   outra regra.
 - Confirmação: igual à senha.
@@ -199,13 +256,18 @@ inválido, e cada mensagem fica associada ao seu campo para leitores de tela.
 | E-mail recusado pelo Supabase | "Informe um e-mail válido" |
 | Dados recusados pelo Supabase | "Verifique os dados informados" |
 | Falha de rede ou Supabase indisponível | "Não foi possível conectar. Tente novamente." |
+| Link de nova senha vencido, já usado ou malformado | "Este link expirou ou já foi usado", com atalho para pedir outro |
+| Troca de senha falhou depois de o link ser gasto | "Não foi possível trocar a senha" ou "A senha foi recusada por ser fraca", com atalho para pedir outro |
+| Pedido de link para qualquer e-mail | sempre o mesmo aviso neutro |
 | Sessão expirada | redirecionamento para `/login` |
 
 Toda tradução de erro do Supabase passa por `lib/auth/errors.ts`. Um erro não
 mapeado vira a mensagem genérica de conexão; texto técnico em inglês nunca
 chega à tela. Sempre que o usuário recebe essa mensagem genérica, a causa é
 registrada no console do servidor. Só o objeto de erro é registrado; os dados
-do formulário não são passados ao log.
+do formulário não são passados ao log. Na recuperação de senha o registro
+leva só o código e o status do erro, porque o Supabase cita o e-mail digitado
+em algumas mensagens.
 
 Se a confirmação de e-mail for religada no Supabase, o cadastro mostra o aviso
 "Conta criada. Confirme seu e-mail para entrar.".
@@ -227,12 +289,20 @@ proxy falha com a página de erro padrão do servidor, em inglês.
   compartilhado, inclusive nos redirecionamentos.
 - A senha nunca é devolvida ao navegador depois de um envio com erro.
 - Hash de senha e limite de tentativas ficam com o Supabase.
+- O pedido de recuperação responde igual, na tela e nos cookies, exista ou
+  não uma conta com o e-mail. Isso não esconde quem tem cadastro: a tela de
+  cadastro continua avisando quando o e-mail já está em uso.
+- O link de nova senha vale uma vez, não abre sessão ao ser aberto, e a
+  página que o recebe não envia o endereço a outros sites
+  (`referrer: no-referrer`).
+- Trocar a senha encerra as outras sessões da conta.
 - A proteção acontece no servidor, em três pontos: proxy, layout do dashboard
   e função de dados.
 
 ## Testes
 
-Unitários (Vitest), em `lib/**/*.test.ts`, com `npm test`:
+Unitários (Vitest), em `lib/**/*.test.ts` e `app/**/*.test.ts`, com
+`npm test`:
 
 - Esquemas de validação: casos válidos e cada regra violada.
 - Tradução de erros: cada erro mapeado e o caso não mapeado.
@@ -242,6 +312,10 @@ Unitários (Vitest), em `lib/**/*.test.ts`, com `npm test`:
 - Dados do dashboard: não são entregues sem sessão.
 - Proxy: cookies, remoção de cookies e cabeçalhos de cache preservados.
 - Opções dos cookies de sessão: `Secure` só no build de produção.
+- Recuperação de senha: pedido com resposta neutra, troca pelo link, link
+  vencido, falha depois de o link ser gasto, e o que vai para o log.
+- Actions de recuperação (`app/(auth)/actions.test.ts`): senha inválida não
+  gasta o link, e o pedido do link não usa o cliente com cookies.
 
 Ponta a ponta (Playwright), em `e2e/`, com `npm run test:e2e`. A suíte gera
 um build de produção e o serve na porta 3100, sem usar o servidor de
@@ -260,6 +334,9 @@ desenvolvimento. Roda contra o projeto Supabase real e cobre:
 - Cookies de sessão HTTP-only e `Secure`.
 - Casca do dashboard em tela grande e pequena.
 - Página não encontrada em português.
+- Recuperação de senha: link no login, validação, aviso neutro, página sem
+  link, link inválido, e senha digitada que não fica guardada. O caminho com o e-mail real não é coberto: a suíte
+  não lê caixas de entrada.
 
 Cada execução cria dez usuários com e-mails `e2e-…` únicos. A
 limpeza é manual, pelo painel do Supabase (Authentication → Users), porque o
@@ -273,4 +350,7 @@ automatizado.
 
 - Um projeto Supabase no plano gratuito, com a confirmação de e-mail desligada
   (Authentication → Sign In / Providers → Email → Confirm email).
+- Para a recuperação de senha: no mesmo projeto Supabase, o endereço do site,
+  o modelo do e-mail "Reset Password" e um servidor SMTP próprio (passos no
+  README).
 - Node.js 24 instalado na máquina.
