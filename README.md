@@ -68,6 +68,48 @@ contas por execução**, com e-mails `e2e-…@example.com`. Apague-as de
 tempos em tempos em Authentication → Users. Se o Supabase recusar o domínio
 `example.com`, defina `E2E_EMAIL_DOMAIN` em `.env.local` com um domínio real.
 
+## Publicar no Easypanel
+
+O `Dockerfile` na raiz gera a imagem de produção: instala as dependências,
+faz o build no modo standalone e roda `node server.js` na porta 3000. O
+build baixa as fontes do Google Fonts, então o servidor precisa de acesso à
+internet nessa etapa.
+
+Atenção: com a confirmação de e-mail desligada (passo 3 de "Como rodar"),
+qualquer pessoa que tenha o endereço do site consegue criar uma conta.
+
+Os nomes das telas abaixo podem variar conforme a versão do Easypanel.
+
+1. Envie o repositório para o GitHub.
+2. No Easypanel, crie um serviço do tipo **App** e, em **Source**, aponte para
+   o repositório e a branch. Em **Build**, escolha **Dockerfile** (arquivo
+   `Dockerfile`).
+3. Em **Environment**, defina as duas variáveis antes do primeiro deploy:
+
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   ```
+
+   O Next.js grava essas variáveis no build, não na inicialização. Por isso o
+   build falha com uma mensagem clara se elas faltarem, e é preciso fazer um
+   novo deploy (não só reiniciar) sempre que mudarem.
+4. Em **Domains**, adicione o domínio com HTTPS e a porta do contêiner
+   **3000**.
+5. Clique em **Deploy**.
+
+Para testar a imagem na sua máquina, com Docker instalado:
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co \
+  --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_... \
+  -t painel-crm .
+docker run --rm -p 3000:3000 painel-crm
+```
+
+Depois abra http://localhost:3000.
+
 ## Como a proteção funciona
 
 - `proxy.ts` roda a cada requisição de página (não para arquivos estáticos
@@ -90,6 +132,7 @@ tempos em tempos em Authentication → Users. Se o Supabase recusar o domínio
 | `lib/supabase/` | cliente Supabase do servidor e renovação da sessão |
 | `lib/dashboard/` | dados de demonstração |
 | `e2e/` | testes de ponta a ponta |
+| `Dockerfile`, `.dockerignore` | imagem de produção para o Easypanel |
 | `docs/superpowers/` | spec e plano de implementação |
 
 O desenho completo está em

@@ -1,0 +1,39 @@
+# Keeps secrets, local builds and tooling out of the Docker build context.
+.git
+.gitignore
+node_modules
+.next
+out
+build
+coverage
+
+# env files: the image gets its variables from Easypanel, never from disk
+.env*
+
+# tests and their output
+e2e
+test-results
+playwright-report
+playwright.config.ts
+vitest.config.mts
+**/*.test.ts
+
+# docs and local tooling
+docs
+README.md
+AGENTS.md
+Dockerfile
+.dockerignore
+.claude
+.serena
+.superpowers
+.playwright-mcp
+teste
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.pem
+.vercel
+.DS_Store

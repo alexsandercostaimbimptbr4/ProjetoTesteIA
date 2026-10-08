@@ -39,7 +39,9 @@ Fora:
 - Login social.
 - Perfis de acesso (admin, usuário comum).
 - Módulos reais do CRM (contatos, funil, tarefas, relatórios).
-- Publicação na internet.
+- Endurecimento para uso público: confirmação de e-mail, recuperação de senha
+  e proteção contra cadastros automáticos. O repositório traz um `Dockerfile`
+  para o Easypanel (passos no README), mas sem esses itens.
 
 ## Stack
 
@@ -129,6 +131,7 @@ tradicional:
 | `components/auth/` | `LoginForm`, `SignupForm`, `FormField`, `SubmitButton`, `useClientValidation`, `useResetKeyOnHide` |
 | `components/dashboard/` | `Sidebar`, `Header`, `UserMenu`, `StatCard`, `RecentActivity` |
 | `components/ui/` | componentes gerados pelo shadcn/ui |
+| `Dockerfile`, `.dockerignore` | imagem de produção (build standalone, `node server.js` na porta 3000) |
 
 Cada unidade tem uma responsabilidade. Os formulários não conhecem o Supabase:
 chamam as actions e exibem o resultado. Os componentes do dashboard recebem os
