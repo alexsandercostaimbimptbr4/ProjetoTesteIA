@@ -72,7 +72,8 @@ interna do Supabase Auth, e o nome vai nos metadados do usuário.
 3. O Supabase devolve a sessão, gravada em cookies HTTP-only. A biblioteca
    não liga essa opção por padrão; ela é definida em
    `lib/supabase/cookie-options.ts`.
-4. A cada requisição, o interceptador `proxy.ts` (o antigo `middleware.ts`,
+4. A cada requisição de página (ele não roda para os arquivos estáticos do
+   Next.js nem para imagens), o interceptador `proxy.ts` (o antigo `middleware.ts`,
    renomeado no Next.js 16) renova a sessão e aplica os redirecionamentos:
    deslogado em `/dashboard` vai para `/login`; logado em `/login` ou
    `/cadastro` vai para `/dashboard`.
@@ -125,7 +126,7 @@ tradicional:
 | `app/(auth)/layout.tsx`, `login/`, `cadastro/` | telas de autenticação |
 | `app/dashboard/` | layout da casca e página Visão geral |
 | `app/not-found.tsx`, `error.tsx`, `global-error.tsx` | telas de erro em português |
-| `components/auth/` | `LoginForm`, `SignupForm`, `FormField`, `SubmitButton`, `useClientValidation` |
+| `components/auth/` | `LoginForm`, `SignupForm`, `FormField`, `SubmitButton`, `useClientValidation`, `useResetKeyOnHide` |
 | `components/dashboard/` | `Sidebar`, `Header`, `UserMenu`, `StatCard`, `RecentActivity` |
 | `components/ui/` | componentes gerados pelo shadcn/ui |
 

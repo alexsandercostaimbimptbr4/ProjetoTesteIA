@@ -16,6 +16,10 @@ test("mostra a casca do CRM", async ({ page }) => {
     await expect(page.getByText(label)).toBeVisible();
   }
   await expect(page.getByText("Dados de demonstração")).toBeVisible();
+  // The name shown on the user button is part of its accessible name.
+  await expect(
+    page.getByRole("button", { name: new RegExp(user.name) }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Atividades recentes" }),
   ).toBeVisible();

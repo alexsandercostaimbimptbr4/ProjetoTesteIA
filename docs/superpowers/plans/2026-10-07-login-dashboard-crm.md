@@ -24,8 +24,8 @@ vale a spec. As diferenças principais:
   como a Task 1 descreve. O `playwright.config.ts` carrega `.env.local`.
 - **Cliente Supabase do navegador.** `lib/supabase/client.ts` foi criado na
   Task 3 e depois removido, porque nada o usava.
-- **Arquivos a mais.** `components/auth/form-field.tsx`, `submit-button.tsx` e
-  `use-client-validation.ts`; `lib/supabase/cookie-options.ts`;
+- **Arquivos a mais.** `components/auth/form-field.tsx`, `submit-button.tsx`,
+  `use-client-validation.ts` e `use-reset-key-on-hide.ts`; `lib/supabase/cookie-options.ts`;
   `app/not-found.tsx`, `error.tsx` e `global-error.tsx`.
 - **Regras acrescentadas nas revisões.** Cookies de sessão HTTP-only, nome
   limitado a 100 caracteres, senha limitada a 72 bytes, mensagens próprias

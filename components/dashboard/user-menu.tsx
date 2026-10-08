@@ -30,14 +30,13 @@ export function UserMenu({ user }: { user: DisplayUser }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            variant="ghost"
-            aria-label="Menu do usuário"
-            className="h-auto gap-2 px-2 py-1"
-          />
+          <Button variant="ghost" className="h-auto gap-2 px-2 py-1" />
         }
       >
-        <Avatar size="sm">
+        {/* The accessible name is the visible name (and e-mail) plus this
+            hidden label; an aria-label would replace the visible text. */}
+        <span className="sr-only">Menu do usuário:</span>
+        <Avatar size="sm" aria-hidden>
           <AvatarFallback>{initials(user.name)}</AvatarFallback>
         </Avatar>
         <span className="grid text-left leading-tight">

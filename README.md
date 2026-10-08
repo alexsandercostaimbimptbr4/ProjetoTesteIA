@@ -70,7 +70,8 @@ tempos em tempos em Authentication → Users. Se o Supabase recusar o domínio
 
 ## Como a proteção funciona
 
-- `proxy.ts` roda a cada requisição, renova a sessão e redireciona: deslogado
+- `proxy.ts` roda a cada requisição de página (não para arquivos estáticos
+  nem imagens), renova a sessão e redireciona: deslogado
   em `/` ou em qualquer endereço sob `/dashboard` vai para o login; logado em
   `/`, `/login` ou `/cadastro` vai para o dashboard.
 - O layout do dashboard e a função que entrega os dados conferem a sessão de

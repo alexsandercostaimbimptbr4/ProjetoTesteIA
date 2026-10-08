@@ -23,6 +23,11 @@ it.each([
   [{ code: "weak_password" }, "signup", "Escolha uma senha mais forte"],
   [{ code: "email_address_invalid" }, "signup", "Informe um e-mail válido"],
   [{ code: "validation_failed" }, "login", "Verifique os dados informados"],
+  [
+    { code: "over_email_send_rate_limit" },
+    "signup",
+    "Muitas tentativas. Aguarde alguns minutos.",
+  ],
   [{ status: 429 }, "signup", "Muitas tentativas. Aguarde alguns minutos."],
   [{ code: "unexpected_failure", message: "Database error" }, "login", GENERIC],
   [{ code: "constructor" }, "login", GENERIC],
