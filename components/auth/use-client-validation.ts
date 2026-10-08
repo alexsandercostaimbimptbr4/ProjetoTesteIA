@@ -13,7 +13,8 @@ export function useClientValidation(schema: z.ZodType) {
   // the server may wait in that hidden screen for whoever uses the browser
   // next, so the fields are emptied right away. form.reset() would not do: it
   // restores the e-mail the server sent back after a failed attempt. The form
-  // itself is rebuilt on return (see useResetKeyOnHide).
+  // itself is rebuilt once hidden (see useResetKeyOnHide), but not in the same
+  // instant, which is why the fields are emptied here.
   //
   // In development, StrictMode runs this cleanup once right after mount, so
   // anything typed before the page finishes loading is cleared. Production
@@ -30,6 +31,8 @@ export function useClientValidation(schema: z.ZodType) {
         .forEach((input) => {
           input.value = "";
         });
+      // Redundant when the form is keyed with useResetKeyOnHide, as both
+      // forms are; kept so this hook is correct on its own.
       setClientErrors(null);
     };
   }, []);
