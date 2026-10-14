@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { AUTH_MESSAGES, NEEDS_NEW_LINK } from "./errors";
+import { AUTH_MESSAGES } from "./errors";
 import {
   redeemResetLink,
   requestPasswordReset,
@@ -56,8 +56,12 @@ it.each([
   },
   { status: 400, code: "email_address_not_authorized" },
   { status: 429, code: "over_email_send_rate_limit" },
+  // Supabase only tries to send mail, and so can only fail at it, when the
+  // account exists: a failure to send must read like an unknown address.
+  { status: 500, code: "unexpected_failure" },
+  { status: 503, name: "AuthRetryableFetchError" },
 ])(
-  "responde igual quando o Supabase recusa o envio (%o), e registra a causa",
+  "responde igual quando o Supabase recusa ou falha no envio (%o), e registra a causa",
   async (error) => {
     const { auth } = fakeAuth({ resetPasswordForEmail: { error } });
     await expect(requestPasswordReset(auth, "ana@email.com")).resolves.toBe(
@@ -67,15 +71,15 @@ it.each([
     expect(console.error).toHaveBeenCalledExactlyOnceWith(expect.any(String), {
       code: error.code,
       status: error.status,
-      name: undefined,
+      name: error.name,
     });
   },
 );
 
 it.each([
-  { error: { status: 500, code: "unexpected_failure" } },
+  { error: { status: 0, name: "AuthRetryableFetchError" } },
   new TypeError("fetch failed"),
-])("avisa quando o Supabase está fora do ar (%o)", async (answer) => {
+])("avisa quando o Supabase não responde (%o)", async (answer) => {
   const { auth } = fakeAuth({ resetPasswordForEmail: answer });
   await expect(requestPasswordReset(auth, "ana@email.com")).resolves.toBe(
     "unavailable",
@@ -101,7 +105,11 @@ it("link vencido não troca a senha", async () => {
   });
   await expect(
     redeemResetLink(auth, "hash-1", "senha-nova-1"),
-  ).resolves.toEqual({ ok: false, message: AUTH_MESSAGES.linkExpired });
+  ).resolves.toEqual({
+    ok: false,
+    message: AUTH_MESSAGES.linkExpired,
+    needsNewLink: true,
+  });
   expect(calls.map(([name]) => name)).toEqual(["verifyOtp"]);
 });
 
@@ -112,7 +120,11 @@ it.each([
   const { auth, calls } = fakeAuth({});
   await expect(
     redeemResetLink(auth, tokenHash, "senha-nova-1"),
-  ).resolves.toEqual({ ok: false, message: AUTH_MESSAGES.linkExpired });
+  ).resolves.toEqual({
+    ok: false,
+    message: AUTH_MESSAGES.linkExpired,
+    needsNewLink: true,
+  });
   expect(calls).toEqual([]);
 });
 
@@ -121,8 +133,11 @@ it("limite de tentativas ao conferir o link não o dá por perdido", async () =>
     verifyOtp: { error: { status: 429, code: "over_request_rate_limit" } },
   });
   const result = await redeemResetLink(auth, "hash-1", "senha-nova-1");
-  expect(result).toEqual({ ok: false, message: AUTH_MESSAGES.rateLimited });
-  expect(NEEDS_NEW_LINK).not.toContain(AUTH_MESSAGES.rateLimited);
+  expect(result).toEqual({
+    ok: false,
+    message: AUTH_MESSAGES.rateLimited,
+    needsNewLink: false,
+  });
   expect(calls.map(([name]) => name)).toEqual(["verifyOtp"]);
 });
 
@@ -132,7 +147,11 @@ it("falha inesperada ao conferir o link é registrada", async () => {
   });
   await expect(
     redeemResetLink(auth, "hash-1", "senha-nova-1"),
-  ).resolves.toEqual({ ok: false, message: AUTH_MESSAGES.generic });
+  ).resolves.toEqual({
+    ok: false,
+    message: AUTH_MESSAGES.generic,
+    needsNewLink: false,
+  });
   expect(console.error).toHaveBeenCalledOnce();
 });
 
@@ -154,7 +173,7 @@ it.each([
     const { auth, calls } = fakeAuth({ updateUser: { error } });
     await expect(
       redeemResetLink(auth, "hash-1", "senha-nova-1"),
-    ).resolves.toEqual({ ok: false, message });
+    ).resolves.toEqual({ ok: false, message, needsNewLink: true });
     expect(calls.at(-1)).toEqual(["signOut", { scope: "local" }]);
   },
 );
@@ -165,7 +184,11 @@ it("se a troca lança um erro, também sai da sessão aberta pelo link", async (
   });
   await expect(
     redeemResetLink(auth, "hash-1", "senha-nova-1"),
-  ).resolves.toEqual({ ok: false, message: AUTH_MESSAGES.resetFailed });
+  ).resolves.toEqual({
+    ok: false,
+    message: AUTH_MESSAGES.resetFailed,
+    needsNewLink: true,
+  });
   expect(calls.at(-1)).toEqual(["signOut", { scope: "local" }]);
 });
 
@@ -176,7 +199,11 @@ it("se nem sair da sessão funciona, ainda responde que a troca falhou", async (
   });
   await expect(
     redeemResetLink(auth, "hash-1", "senha-nova-1"),
-  ).resolves.toEqual({ ok: false, message: AUTH_MESSAGES.resetFailed });
+  ).resolves.toEqual({
+    ok: false,
+    message: AUTH_MESSAGES.resetFailed,
+    needsNewLink: true,
+  });
   // One entry for the password, one for the sign-out.
   expect(console.error).toHaveBeenCalledTimes(2);
 });

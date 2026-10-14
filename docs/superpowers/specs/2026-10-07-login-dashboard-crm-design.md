@@ -101,11 +101,15 @@ pessoa logada e a leva direto ao dashboard.
 
 1. Em `/recuperar-senha` a pessoa informa o e-mail. A action pede ao Supabase
    o envio do link e responde sempre o mesmo aviso, exista a conta ou não.
-   Recusas do Supabase (endereço que ele não aceita, limite de envios) também
-   recebem esse aviso; o código do erro vai para o log do servidor. Só o
-   Supabase fora do ar (sem conexão ou erro 5xx) aparece como erro. O pedido
-   usa um cliente Supabase sem cookies (`lib/supabase/stateless.ts`), para a
-   resposta não variar conforme a conta exista.
+   Recusas do Supabase (endereço que ele não aceita, limite de envios) e
+   falhas dele (erro 5xx) também recebem esse aviso; o código, o status e o
+   tipo do erro vão para o log do servidor. O Supabase só tenta enviar o
+   e-mail, e só pode falhar nisso, quando a conta existe: mostrar a falha
+   revelaria a conta. Só a falta de resposta do Supabase Auth (sem conexão,
+   ou outro serviço respondendo no lugar dele) aparece como erro, e o e-mail
+   digitado continua no campo. O pedido usa um cliente Supabase sem cookies
+   (`lib/supabase/stateless.ts`), para a resposta não variar conforme a
+   conta exista.
 2. O e-mail leva a `/redefinir-senha?token_hash=…`. O modelo do e-mail é
    configurado no painel do Supabase para montar esse endereço.
 3. A página entrega o `token_hash` ao formulário num campo oculto. Sem ele,
@@ -158,7 +162,7 @@ tradicional:
 | `lib/supabase/proxy.ts` | renovação da sessão e redirecionamentos, preservando cookies e cabeçalhos de cache |
 | `lib/supabase/stateless.ts` | cliente Supabase sem sessão nem cookies, usado no pedido do link |
 | `lib/supabase/cookie-options.ts` | opções dos cookies de sessão (HTTP-only, e `Secure` no build de produção) |
-| `lib/auth/schemas.ts` | esquemas Zod de login e cadastro |
+| `lib/auth/schemas.ts` | esquemas Zod de login, cadastro, pedido do link e nova senha |
 | `lib/auth/errors.ts` | tradução dos erros do Supabase para mensagens em português |
 | `lib/auth/routes.ts` | regra de redirecionamento por rota |
 | `lib/auth/user.ts` | nome e e-mail de exibição a partir dos dados da sessão |
@@ -255,7 +259,7 @@ inválido, e cada mensagem fica associada ao seu campo para leitores de tela.
 | Senha recusada pelo Supabase como fraca | "Escolha uma senha mais forte" |
 | E-mail recusado pelo Supabase | "Informe um e-mail válido" |
 | Dados recusados pelo Supabase | "Verifique os dados informados" |
-| Falha de rede ou Supabase indisponível | "Não foi possível conectar. Tente novamente." |
+| Falha de rede ou Supabase indisponível (no pedido do link, só sem resposta do Supabase Auth) | "Não foi possível conectar. Tente novamente." |
 | Link de nova senha vencido, já usado ou malformado | "Este link expirou ou já foi usado", com atalho para pedir outro |
 | Troca de senha falhou depois de o link ser gasto | "Não foi possível trocar a senha" ou "A senha foi recusada por ser fraca", com atalho para pedir outro |
 | Pedido de link para qualquer e-mail | sempre o mesmo aviso neutro |
@@ -264,10 +268,9 @@ inválido, e cada mensagem fica associada ao seu campo para leitores de tela.
 Toda tradução de erro do Supabase passa por `lib/auth/errors.ts`. Um erro não
 mapeado vira a mensagem genérica de conexão; texto técnico em inglês nunca
 chega à tela. Sempre que o usuário recebe essa mensagem genérica, a causa é
-registrada no console do servidor. Só o objeto de erro é registrado; os dados
-do formulário não são passados ao log. Na recuperação de senha o registro
-leva só o código e o status do erro, porque o Supabase cita o e-mail digitado
-em algumas mensagens.
+registrada no console do servidor: só o código, o status e o tipo do erro,
+nunca a mensagem, porque o Supabase cita o e-mail digitado em algumas delas.
+Os dados do formulário não são passados ao log.
 
 Se a confirmação de e-mail for religada no Supabase, o cadastro mostra o aviso
 "Conta criada. Confirme seu e-mail para entrar.".
@@ -290,8 +293,11 @@ proxy falha com a página de erro padrão do servidor, em inglês.
 - A senha nunca é devolvida ao navegador depois de um envio com erro.
 - Hash de senha e limite de tentativas ficam com o Supabase.
 - O pedido de recuperação responde igual, na tela e nos cookies, exista ou
-  não uma conta com o e-mail. Isso não esconde quem tem cadastro: a tela de
-  cadastro continua avisando quando o e-mail já está em uso.
+  não uma conta com o e-mail, inclusive quando o envio falha no Supabase. O
+  tempo de resposta ainda varia: com conta, o Supabase grava o pedido e envia
+  o e-mail antes de responder. Isso não esconde quem tem cadastro, e nem
+  precisa: a tela de cadastro continua avisando quando o e-mail já está em
+  uso.
 - O link de nova senha vale uma vez, não abre sessão ao ser aberto, e a
   página que o recebe não envia o endereço a outros sites
   (`referrer: no-referrer`).
@@ -305,7 +311,8 @@ Unitários (Vitest), em `lib/**/*.test.ts` e `app/**/*.test.ts`, com
 `npm test`:
 
 - Esquemas de validação: casos válidos e cada regra violada.
-- Tradução de erros: cada erro mapeado e o caso não mapeado.
+- Tradução de erros: cada erro mapeado, o caso não mapeado, quando o Supabase
+  conta como sem resposta, e o que vai para o log.
 - Regra de redirecionamento por rota.
 - Nome de exibição do usuário.
 - `getCurrentUser`: redireciona sem sessão.
@@ -315,7 +322,10 @@ Unitários (Vitest), em `lib/**/*.test.ts` e `app/**/*.test.ts`, com
 - Recuperação de senha: pedido com resposta neutra, troca pelo link, link
   vencido, falha depois de o link ser gasto, e o que vai para o log.
 - Actions de recuperação (`app/(auth)/actions.test.ts`): senha inválida não
-  gasta o link, e o pedido do link não usa o cliente com cookies.
+  gasta o link, o pedido do link não usa o cliente com cookies e mantém o
+  e-mail quando o Supabase não responde, o atalho para pedir outro link só
+  aparece quando o link não serve mais, e uma falha inesperada vai para o log
+  sem a mensagem do erro.
 
 Ponta a ponta (Playwright), em `e2e/`, com `npm run test:e2e`. A suíte gera
 um build de produção e o serve na porta 3100, sem usar o servidor de
@@ -335,8 +345,8 @@ desenvolvimento. Roda contra o projeto Supabase real e cobre:
 - Casca do dashboard em tela grande e pequena.
 - Página não encontrada em português.
 - Recuperação de senha: link no login, validação, aviso neutro, página sem
-  link, link inválido, e senha digitada que não fica guardada. O caminho com o e-mail real não é coberto: a suíte
-  não lê caixas de entrada.
+  link, link inválido, e senha digitada que não fica guardada. O caminho com
+  o e-mail real não é coberto: a suíte não lê caixas de entrada.
 
 Cada execução cria dez usuários com e-mails `e2e-…` únicos. A
 limpeza é manual, pelo painel do Supabase (Authentication → Users), porque o

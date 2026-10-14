@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   AUTH_MESSAGES,
+  logFailure,
   translateAuthError,
   type AuthContext,
 } from "@/lib/auth/errors";
@@ -26,12 +27,12 @@ const text = (formData: FormData, key: string) =>
   String(formData.get(key) ?? "");
 
 // Translates a Supabase failure for the screen. When all the user gets is the
-// generic message, the cause goes to the server log. Only the error object
-// is logged; the form data is never passed to the log.
+// generic message, the cause goes to the server log, without the error's
+// message, which can quote what was typed.
 function failureMessage(error: unknown, context: AuthContext) {
   const message = translateAuthError(error, context);
   if (message === AUTH_MESSAGES.generic) {
-    console.error(`Falha inesperada (${context}):`, error);
+    logFailure(`Falha inesperada (${context}):`, error);
   }
   return message;
 }
@@ -152,9 +153,16 @@ export async function resetPassword(
       parsed.data.password,
     );
   } catch (error) {
-    return { message: failureMessage(error, "reset") };
+    const message = failureMessage(error, "reset");
+    return message === AUTH_MESSAGES.linkExpired
+      ? { message, needsNewLink: true }
+      : { message };
   }
-  if (!result.ok) return { message: result.message };
+  if (!result.ok) {
+    return result.needsNewLink
+      ? { message: result.message, needsNewLink: true }
+      : { message: result.message };
+  }
 
   revalidatePath("/", "layout");
   redirect("/dashboard");

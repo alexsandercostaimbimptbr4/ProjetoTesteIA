@@ -1,12 +1,17 @@
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
-  isServiceFailure,
+  isUnreachable,
+  logFailure,
   translateAuthError,
   type AuthContext,
 } from "./errors";
 
 const GENERIC = "Não foi possível conectar. Tente novamente.";
 const LINK_EXPIRED = "Este link expirou ou já foi usado";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 it.each([
   [{ code: "invalid_credentials" }, "login", "E-mail ou senha incorretos"],
@@ -54,11 +59,29 @@ it.each([
 it.each([
   [{ status: 400, code: "email_address_not_authorized" }, false],
   [{ status: 429, code: "over_email_send_rate_limit" }, false],
-  [{ status: 500, code: "unexpected_failure" }, true],
-  // The library reports a network failure with status 0.
+  // Supabase answered, even if with a failure of its own.
+  [{ status: 500, code: "unexpected_failure" }, false],
+  [{ status: 503, name: "AuthRetryableFetchError" }, false],
+  // The library reports a network failure, or a body it could not read,
+  // with status 0.
   [{ status: 0, name: "AuthRetryableFetchError" }, true],
-  [{ name: "AuthRetryableFetchError" }, true],
+  // Something other than Supabase Auth answered: no status at all.
+  [{ name: "AuthUnknownError" }, true],
   [new TypeError("fetch failed"), true],
   [null, true],
-])("isServiceFailure(%o) é %s", (error, expected) =>
-  expect(isServiceFailure(error)).toBe(expected));
+])("isUnreachable(%o) é %s", (error, expected) =>
+  expect(isUnreachable(error)).toBe(expected));
+
+it("logFailure registra o código, o status e o tipo, nunca a mensagem", () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const error = Object.assign(new Error(`Email "ana@email.com" is invalid`), {
+    code: "email_address_invalid",
+    status: 400,
+  });
+  logFailure("Falha:", error);
+  expect(log).toHaveBeenCalledExactlyOnceWith("Falha:", {
+    code: "email_address_invalid",
+    status: 400,
+    name: "Error",
+  });
+});

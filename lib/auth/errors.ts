@@ -14,14 +14,6 @@ export const AUTH_MESSAGES = {
   resetWeakPassword: "A senha foi recusada por ser fraca",
 } as const;
 
-// Shown with a shortcut to ask for another link: after any of these the link
-// in hand is of no use, either spent or never valid.
-export const NEEDS_NEW_LINK: readonly string[] = [
-  AUTH_MESSAGES.linkExpired,
-  AUTH_MESSAGES.resetFailed,
-  AUTH_MESSAGES.resetWeakPassword,
-];
-
 export type AuthContext = "login" | "signup" | "reset";
 
 const BY_CODE: Record<string, string> = {
@@ -63,11 +55,20 @@ export function translateAuthError(
   return AUTH_MESSAGES.generic;
 }
 
-// True when Supabase could not be reached or broke, as opposed to having
-// answered with a refusal (a 4xx). The library reports network failures as an
-// error without a 4xx status, or throws.
-export function isServiceFailure(error: unknown): boolean {
+// Supabase quotes the address in some error messages, and what a person typed
+// must not reach the log: only the code, the status and the kind of error are
+// recorded, never the message.
+export function logFailure(what: string, error: unknown) {
+  const { code, status, name } = (error ?? {}) as Record<string, unknown>;
+  console.error(what, { code, status, name });
+}
+
+// True when no answer from Supabase Auth came back, as opposed to a refusal or
+// a failure of its own. The library throws, or reports status 0 when the
+// request failed or the body could not be read, and no status at all when
+// what answered was not Supabase Auth (a proxy, a wrong address).
+export function isUnreachable(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return true;
   const { status } = error as { status?: unknown };
-  return !(typeof status === "number" && status >= 400 && status < 500);
+  return typeof status !== "number" || status === 0;
 }

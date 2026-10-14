@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { resetPassword } from "@/app/(auth)/actions";
-import { NEEDS_NEW_LINK } from "@/lib/auth/errors";
 import { resetSchema } from "@/lib/auth/schemas";
 import { FormField } from "./form-field";
 import { NewLinkNotice } from "./new-link-notice";
@@ -32,7 +31,7 @@ function ResetFields({ tokenHash }: { tokenHash: string }) {
       className="grid gap-4"
     >
       {showServerState && state.message ? (
-        NEEDS_NEW_LINK.includes(state.message) ? (
+        state.needsNewLink ? (
           <NewLinkNotice
             message={state.message}
             className="text-sm text-destructive"

@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AUTH_MESSAGES,
-  isServiceFailure,
+  isUnreachable,
+  logFailure,
   translateAuthError,
 } from "./errors";
 
@@ -14,18 +15,13 @@ export type ResetAuth = Pick<Auth, "verifyOtp" | "updateUser" | "signOut">;
 // Longer than any link Supabase issues. Anything above it is not a link.
 const MAX_TOKEN_HASH_LENGTH = 256;
 
-// Supabase quotes the address in some error messages, and what a person typed
-// must not reach the log: only the code and the status are recorded.
-function logFailure(what: string, error: unknown) {
-  const { code, status, name } = (error ?? {}) as Record<string, unknown>;
-  console.error(what, { code, status, name });
-}
-
 // Asks Supabase to e-mail a reset link. The answer is "sent" for every
 // refusal too (sending limit, address the mail server will not deliver to),
 // just as it is for an address no account uses, which Supabase accepts
-// without sending anything. The cause of a refusal goes to the server log.
-// Only Supabase being unreachable or failing is reported as such.
+// without sending anything. A failure of Supabase's own (a 5xx) is also
+// "sent": Supabase only tries to send mail, and so can only fail at it, when
+// the account exists. The cause goes to the server log. Only Supabase not
+// answering at all is reported as such.
 export async function requestPasswordReset(
   auth: RecoverAuth,
   email: string,
@@ -34,14 +30,18 @@ export async function requestPasswordReset(
     const { error } = await auth.resetPasswordForEmail(email);
     if (!error) return "sent";
     logFailure("Falha ao pedir o e-mail de recuperação:", error);
-    return isServiceFailure(error) ? "unavailable" : "sent";
+    return isUnreachable(error) ? "unavailable" : "sent";
   } catch (error) {
     logFailure("Falha ao pedir o e-mail de recuperação:", error);
     return "unavailable";
   }
 }
 
-export type RedeemResult = { ok: true } | { ok: false; message: string };
+// `needsNewLink` is true when the link in hand is of no use, either spent or
+// never valid, so the screen offers to ask for another.
+export type RedeemResult =
+  | { ok: true }
+  | { ok: false; message: string; needsNewLink: boolean };
 
 // Spends the link from the e-mail and sets the new password in one step. The
 // link is only checked here, when the form is submitted: opening it does not
@@ -53,7 +53,7 @@ export async function redeemResetLink(
   password: string,
 ): Promise<RedeemResult> {
   if (!tokenHash || tokenHash.length > MAX_TOKEN_HASH_LENGTH) {
-    return { ok: false, message: AUTH_MESSAGES.linkExpired };
+    return { ok: false, message: AUTH_MESSAGES.linkExpired, needsNewLink: true };
   }
 
   const { error: linkError } = await auth.verifyOtp({
@@ -65,7 +65,12 @@ export async function redeemResetLink(
     if (message === AUTH_MESSAGES.generic) {
       logFailure("Falha inesperada (reset):", linkError);
     }
-    return { ok: false, message };
+    // A limit or an outage leaves the link as it was: trying again may work.
+    return {
+      ok: false,
+      message,
+      needsNewLink: message === AUTH_MESSAGES.linkExpired,
+    };
   }
 
   // From here on the link is spent and has opened a session. If the password
@@ -88,6 +93,7 @@ export async function redeemResetLink(
         message === AUTH_MESSAGES.resetWeakPassword
           ? message
           : AUTH_MESSAGES.resetFailed,
+      needsNewLink: true,
     };
   }
 

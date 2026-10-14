@@ -153,8 +153,10 @@ gasta o link, e a pessoa precisa pedir outro.
 
 A tela responde sempre "Se existir uma conta com este e-mail, enviamos um
 link…", exista a conta ou não. Quando o Supabase recusa o envio (endereço não
-autorizado, limite de envios), o motivo aparece só no log do servidor, como
-`Falha ao pedir o e-mail de recuperação`, com o código do erro.
+autorizado, limite de envios) ou falha nele (SMTP mal configurado, erro 5xx),
+o motivo aparece só no log do servidor, como
+`Falha ao pedir o e-mail de recuperação`, com o código, o status e o tipo
+do erro. Se os e-mails não chegam, é esse log que mostra por quê.
 
 Com o **Site URL** apontando para o site publicado, o link do e-mail abre o
 site publicado. Para testar no `npm run dev`, copie o link e troque o
@@ -180,7 +182,7 @@ endereço por `http://localhost:3000`.
 | `components/auth/`, `components/dashboard/` | formulários e peças do dashboard |
 | `components/ui/` | componentes gerados pelo shadcn/ui |
 | `lib/auth/` | validação, tradução de erros, regras de rota, usuário atual, troca de senha pelo link |
-| `lib/supabase/` | cliente Supabase do servidor e renovação da sessão |
+| `lib/supabase/` | cliente Supabase do servidor, cliente sem cookies para o pedido do link, e renovação da sessão |
 | `lib/dashboard/` | dados de demonstração |
 | `e2e/` | testes de ponta a ponta |
 | `Dockerfile`, `.dockerignore` | imagem de produção para o Easypanel |

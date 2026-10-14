@@ -6,6 +6,9 @@ export type FieldErrors = Partial<Record<AuthField, string>>;
 
 export type AuthFormState = {
   message?: string;
+  // The message is about a reset link that is of no use any more, so the
+  // screen offers to ask for another.
+  needsNewLink?: true;
   // Neutral notice, shown without error styling.
   info?: string;
   fieldErrors?: FieldErrors;
